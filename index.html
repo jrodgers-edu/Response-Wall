@@ -1,0 +1,1615 @@
+<div id="root"></div>
+
+<style>
+  :root{
+    --paper:#FBF9F4;
+    --band:#F2EEE4;
+    --card:#FFFFFF;
+    --sunk:#F4F1E9;
+    --line:#DCD5C6;
+    --ink:#181A20;
+    --muted:#6C7080;
+    --amber:#B4620A;
+    --amber-lit:#F0A429;
+    --teal:#0E7C6B;
+    --rose:#B93B2B;
+    --shadow:0 1px 2px rgba(40,34,22,.05), 0 6px 16px rgba(40,34,22,.06);
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  /* Sun on the screen? Press T in the presenter view. */
+  #root[data-theme="dark"]{
+    --paper:#0B0C10;
+    --band:#14161D;
+    --card:#1A1D26;
+    --sunk:#0F1116;
+    --line:#2C303C;
+    --ink:#F2EFE6;
+    --muted:#8A90A3;
+    --amber:#FFB627;
+    --amber-lit:#FFB627;
+    --teal:#3FD3C6;
+    --rose:#FF6B6B;
+    --shadow:none;
+  }
+
+  *, *::before, *::after { box-sizing:border-box; }
+
+  #root{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--sans);
+    min-height:100vh;
+    margin:0;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  #root :focus-visible{
+    outline:3px solid var(--amber);
+    outline-offset:3px;
+  }
+
+  .label{
+    font-family:var(--mono);
+    font-size:0.72rem;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+
+  /* ---------- shared chrome ---------- */
+  .topbar{
+    display:flex; align-items:center; gap:1rem;
+    padding:0.9rem 1.4rem;
+    border-bottom:1px solid var(--line);
+    background:var(--band);
+  }
+  .brandmark{
+    font-family:var(--mono); font-size:0.72rem; letter-spacing:0.18em;
+    text-transform:uppercase; color:var(--muted);
+  }
+  .live{
+    display:inline-flex; align-items:center; gap:0.45rem;
+    font-family:var(--mono); font-size:0.72rem; letter-spacing:0.14em;
+    text-transform:uppercase; color:var(--teal);
+  }
+  .live .dot{
+    width:8px; height:8px; border-radius:50%; background:var(--teal);
+    animation:pulse 2.4s ease-in-out infinite;
+  }
+  .live.is-stale{ color:var(--rose); }
+  .live.is-stale .dot{ background:var(--rose); animation:none; }
+  @keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:0.25} }
+
+  .btn{
+    font-family:var(--sans); font-size:0.95rem; font-weight:600;
+    color:var(--ink); background:transparent;
+    border:1px solid var(--line); border-radius:8px;
+    padding:0.55rem 0.95rem; cursor:pointer;
+    transition:border-color .15s, background .15s, color .15s;
+  }
+  .btn:hover{ border-color:var(--amber); color:var(--amber); }
+  .btn.is-armed{ border-color:var(--rose); color:var(--rose); }
+  .btn-primary{
+    background:var(--amber-lit); color:#241703; border-color:#DE9420;
+  }
+  .btn-primary:hover{ background:#FFB93F; color:#241703; border-color:#C9860F; }
+  .btn-primary:disabled{ opacity:0.35; cursor:not-allowed; }
+
+  /* ---------- presenter ---------- */
+  .stage{ display:grid; grid-template-rows:auto 1fr auto; height:100vh; }
+  .stage-body{ display:grid; grid-template-columns:1fr; min-height:0; }
+  .stage-body.has-queue{ grid-template-columns:1fr 380px; }
+
+  .slide{
+    padding:2.4rem 3rem 1.5rem;
+    min-height:0; display:flex; flex-direction:column;
+  }
+
+  .content-slide{
+    justify-content:center; align-items:flex-start;
+    max-width:1100px; margin:0 auto; padding-bottom:4rem;
+  }
+  .content-slide.has-qr{
+    display:grid; grid-template-columns:1fr auto; gap:3.5rem;
+    align-items:center; max-width:1400px; width:100%;
+  }
+  .content-slide.has-qr h1{ margin-top:0; }
+  .qr-tile{
+    background:#FFFFFF; border:1px solid var(--line); border-radius:14px;
+    padding:1.1rem 1.1rem 0.9rem; box-shadow:var(--shadow); text-align:center;
+  }
+  .qr-tile svg{ display:block; width:clamp(190px, 22vw, 330px); height:auto; }
+  .qr-caption{
+    font-family:var(--mono); font-size:0.66rem; letter-spacing:0.12em;
+    text-transform:uppercase; color:#7A7466; margin:0.75rem 0 0.3rem;
+  }
+  .qr-url{
+    font-family:var(--mono); font-size:0.7rem; color:#3D3A33; line-height:1.45;
+    word-break:break-all; max-width:clamp(190px, 22vw, 330px); margin:0 auto;
+  }
+  .qr-cta{
+    background:var(--card); border:1px dashed var(--line); border-radius:14px;
+    padding:2rem 1.6rem; text-align:center; max-width:330px;
+  }
+  .qr-cta p{ color:var(--muted); line-height:1.5; margin:0.6rem 0 1.1rem; font-size:0.95rem; }
+
+  .content-slide h1{
+    font-family:var(--serif); font-weight:400;
+    font-size:clamp(2.6rem, 6vw, 5rem);
+    line-height:1.05; letter-spacing:-0.02em;
+    margin:0.6rem 0 2rem;
+  }
+  .content-slide ul{ margin:0; padding:0; list-style:none; }
+  .content-slide li{
+    font-size:clamp(1.3rem, 2.2vw, 2rem);
+    line-height:1.5; color:var(--ink);
+    padding:0.5rem 0 0.5rem 1.6rem;
+    border-left:3px solid var(--line);
+    margin-bottom:0.5rem;
+  }
+
+  .prompt-head{ display:flex; align-items:flex-end; gap:2rem; margin-bottom:1.6rem; flex:0 0 auto; }
+  .prompt-head h1{
+    font-family:var(--serif); font-weight:400;
+    font-size:clamp(1.9rem, 3.6vw, 3.4rem);
+    line-height:1.1; letter-spacing:-0.015em; margin:0.4rem 0 0;
+    flex:1;
+  }
+  .tally{ text-align:right; flex:0 0 auto; }
+  .tally .n{
+    font-family:var(--mono); font-size:clamp(2.2rem,4vw,3.6rem);
+    line-height:1; color:var(--amber); font-variant-numeric:tabular-nums;
+  }
+
+  .wall{ overflow-y:auto; flex:1 1 auto; padding-right:0.5rem; padding-bottom:2rem; }
+  .wall-inner{ column-gap:1rem; }
+  .wall-inner[data-cols="1"]{ column-count:1; }
+  .wall-inner[data-cols="2"]{ column-count:2; }
+  .wall-inner[data-cols="3"]{ column-count:3; }
+  .wall-inner[data-cols="4"]{ column-count:4; }
+
+  .card{
+    break-inside:avoid; -webkit-column-break-inside:avoid;
+    background:var(--card); border:1px solid var(--line);
+    border-left:4px solid var(--amber-lit); border-radius:6px;
+    box-shadow:var(--shadow);
+    padding:1rem 1.1rem 0.9rem; margin:0 0 1rem;
+    animation:land .5s cubic-bezier(.2,.8,.3,1) both;
+  }
+  @keyframes land{
+    from{ opacity:0; transform:translateY(14px) scale(.985); }
+    to{ opacity:1; transform:none; }
+  }
+  .card .idx{
+    font-family:var(--mono); font-size:0.68rem; letter-spacing:0.14em;
+    color:var(--muted); display:block; margin-bottom:0.45rem;
+  }
+  .card p{ margin:0; line-height:1.35; word-break:break-word; }
+  .card.size-l p{ font-size:1.85rem; }
+  .card.size-m p{ font-size:1.45rem; }
+  .card.size-s p{ font-size:1.15rem; }
+
+  .empty-wall{
+    display:flex; align-items:center; justify-content:center;
+    height:100%; min-height:200px; text-align:center; padding:2rem;
+  }
+  .empty-wall p{ font-size:1.3rem; color:var(--muted); max-width:38ch; line-height:1.5; }
+
+  /* ---------- queue ---------- */
+  .queue{
+    border-left:1px solid var(--line); background:var(--band);
+    display:flex; flex-direction:column; min-height:0;
+  }
+  .queue-head{
+    padding:1.1rem 1.2rem 0.9rem; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between; gap:0.75rem;
+  }
+  .queue-count{
+    font-family:var(--mono); font-size:1.1rem; color:var(--amber);
+    font-variant-numeric:tabular-nums;
+  }
+  .queue-list{ overflow-y:auto; padding:0.9rem; flex:1 1 auto; }
+  .pending{
+    background:var(--card); border:1px solid var(--line); border-radius:6px; box-shadow:var(--shadow);
+    padding:0.75rem 0.85rem; margin-bottom:0.75rem;
+    animation:slidein .35s ease both;
+  }
+  @keyframes slidein{ from{opacity:0; transform:translateX(18px)} to{opacity:1; transform:none} }
+  .pending.is-other{ border-style:dashed; opacity:0.75; }
+  .pending .meta{
+    font-family:var(--mono); font-size:0.66rem; letter-spacing:0.12em;
+    color:var(--muted); display:flex; justify-content:space-between; gap:0.5rem;
+    margin-bottom:0.5rem;
+  }
+  .pending p{ margin:0 0 0.7rem; font-size:1.05rem; line-height:1.35; word-break:break-word; }
+  .pending .actions{ display:flex; gap:0.5rem; }
+  .pending .actions .btn{ padding:0.4rem 0.7rem; font-size:0.85rem; flex:1; }
+  .btn-show{ border-color:var(--teal); color:var(--teal); }
+  .btn-show:hover{ background:var(--teal); color:var(--paper); border-color:var(--teal); }
+  .btn-drop:hover{ border-color:var(--rose); color:var(--rose); }
+  .queue-empty{ padding:2rem 1rem; text-align:center; color:var(--muted); font-size:0.95rem; line-height:1.5; }
+
+  /* ---------- footer ---------- */
+  .controls{
+    display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;
+    padding:0.75rem 1.4rem; border-top:1px solid var(--line); background:var(--band);
+  }
+  .controls .spacer{ flex:1; }
+  .pager{ font-family:var(--mono); font-size:0.85rem; color:var(--muted); letter-spacing:0.1em; }
+  .toggle{
+    display:inline-flex; align-items:center; gap:0.55rem; cursor:pointer;
+    font-size:0.9rem; color:var(--muted); user-select:none;
+  }
+  .toggle .track{
+    width:38px; height:20px; border-radius:999px; background:var(--line);
+    position:relative; transition:background .15s;
+  }
+  .toggle .track::after{
+    content:""; position:absolute; top:3px; left:3px; width:14px; height:14px;
+    border-radius:50%; background:var(--muted); transition:transform .15s, background .15s;
+  }
+  .toggle.is-on{ color:var(--teal); }
+  .toggle.is-on .track{ background:rgba(14,124,107,.22); }
+  .toggle.is-on .track::after{ transform:translateX(18px); background:var(--teal); }
+
+  /* ---------- participant ---------- */
+  .join{
+    min-height:100vh; display:flex; flex-direction:column;
+    max-width:720px; margin:0 auto; padding:1.2rem 1.4rem 2.4rem;
+  }
+  .join-head{ display:flex; align-items:center; justify-content:space-between; padding-bottom:1.4rem; }
+  .join-body{ flex:1; display:flex; flex-direction:column; justify-content:center; padding-bottom:2rem; }
+  .join-body h1{
+    font-family:var(--serif); font-weight:400;
+    font-size:clamp(1.8rem, 5.5vw, 2.8rem); line-height:1.15;
+    letter-spacing:-0.015em; margin:0.7rem 0 0.5rem;
+  }
+  .join-body .hint{ color:var(--muted); font-size:1.05rem; line-height:1.5; margin:0 0 1.6rem; }
+  .composer textarea{
+    width:100%; background:var(--card); color:var(--ink);
+    border:1px solid var(--line); border-radius:10px;
+    padding:1rem; font-family:var(--sans); font-size:1.25rem; line-height:1.4;
+    resize:none; min-height:120px;
+  }
+  .composer textarea::placeholder{ color:#9A9384; }
+  .composer textarea:focus{ border-color:var(--amber); }
+  .composer .row{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:1rem; margin-top:0.9rem;
+  }
+  .composer .btn-primary{ font-size:1.1rem; padding:0.85rem 1.6rem; }
+  .counter{ font-family:var(--mono); font-size:0.8rem; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .counter.is-near{ color:var(--amber); }
+
+  .sent{
+    border:1px solid var(--line); border-left:4px solid var(--teal);
+    border-radius:8px; background:var(--card); padding:1.4rem 1.4rem 1.2rem; box-shadow:var(--shadow);
+    animation:land .4s ease both;
+  }
+  .sent h2{ font-family:var(--serif); font-weight:400; font-size:1.7rem; margin:0.5rem 0 0.5rem; }
+  .sent p{ color:var(--muted); line-height:1.5; margin:0 0 1.1rem; font-size:1rem; }
+  .sent blockquote{
+    margin:0 0 1.2rem; padding-left:1rem; border-left:2px solid var(--line);
+    font-size:1.15rem; line-height:1.4; color:var(--ink);
+  }
+  .waiting h1{ color:var(--muted); }
+  .join-foot{
+    color:var(--muted); font-size:0.82rem; line-height:1.5;
+    border-top:1px solid var(--line); padding-top:1rem;
+    display:flex; align-items:center; gap:0.8rem; flex-wrap:wrap;
+  }
+  .join-foot > :first-child{ flex:1; min-width:16rem; }
+  .ghost{
+    background:none; border:none; padding:0.2rem 0; cursor:pointer;
+    font-family:var(--mono); font-size:0.7rem; letter-spacing:0.16em; text-transform:uppercase;
+    color:#9A9384; border-bottom:1px solid transparent;
+  }
+  .ghost:hover{ color:var(--muted); border-bottom-color:var(--muted); }
+  .gate{ display:inline-flex; gap:0.5rem; align-items:center; }
+  .gate input{
+    background:var(--card); border:1px solid var(--line); border-radius:6px;
+    color:var(--ink); padding:0.45rem 0.6rem; font-family:var(--sans); font-size:0.9rem; width:7.5rem;
+  }
+  .gate .btn{ padding:0.45rem 0.8rem; font-size:0.85rem; }
+
+  /* ---------- modal ---------- */
+  .scrim{
+    position:fixed; inset:0; background:rgba(45,38,26,.42);
+    display:flex; align-items:center; justify-content:center; padding:2rem; z-index:50;
+  }
+  .modal{
+    background:var(--paper); border:1px solid var(--line); border-radius:12px;
+    box-shadow:0 24px 60px rgba(45,38,26,.22);
+    width:min(760px, 100%); max-height:86vh; display:flex; flex-direction:column;
+    padding:1.4rem;
+  }
+  .modal h2{ font-family:var(--serif); font-weight:400; font-size:1.7rem; margin:0.4rem 0 1rem; }
+  .modal textarea{
+    flex:1; min-height:280px; width:100%; background:var(--sunk); color:var(--ink);
+    border:1px solid var(--line); border-radius:8px; padding:1rem;
+    font-family:var(--mono); font-size:0.9rem; line-height:1.6; resize:none;
+  }
+  .modal .row{ display:flex; gap:0.7rem; justify-content:flex-end; margin-top:1rem; }
+  .deck-help{ color:var(--muted); font-size:0.9rem; line-height:1.6; margin:0 0 0.9rem; }
+  .deck-help code{
+    font-family:var(--mono); font-size:0.82em; background:var(--sunk);
+    border:1px solid var(--line); border-radius:4px; padding:0.05rem 0.35rem;
+  }
+  .deck-errors{ color:var(--rose); font-size:0.9rem; line-height:1.5; margin:0.7rem 0 0; }
+  .keys{ list-style:none; margin:0; padding:0; }
+  .keys li{ display:flex; gap:1rem; padding:0.5rem 0; border-bottom:1px solid var(--line); font-size:1rem; }
+  .keys kbd{
+    font-family:var(--mono); font-size:0.8rem; background:var(--sunk);
+    border:1px solid var(--line); border-radius:4px; padding:0.15rem 0.45rem; min-width:5.5rem; text-align:center;
+  }
+
+  .toast{
+    position:fixed; bottom:5.5rem; left:50%; transform:translateX(-50%);
+    background:var(--card); border:1px solid var(--line); border-left:4px solid var(--teal);
+    border-radius:8px; padding:0.8rem 1.2rem; font-size:1rem; z-index:60;
+    box-shadow:0 8px 24px rgba(45,38,26,.16);
+    animation:land .3s ease both;
+  }
+
+  @media (max-width: 900px){
+    .content-slide.has-qr{ grid-template-columns:1fr; gap:1.8rem; }
+    .qr-tile svg{ width:min(220px, 55vw); }
+    .stage-body.has-queue{ grid-template-columns:1fr; grid-template-rows:1fr auto; }
+    .queue{ border-left:none; border-top:1px solid var(--line); max-height:45vh; }
+    .slide{ padding:1.4rem 1.4rem 1rem; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    #root *{ animation:none !important; transition:none !important; }
+  }
+</style>
+
+<!-- qrcode-generator v2.0.4 by Kazuhiko Arase — MIT licence. Bundled so the QR works without a network fetch. -->
+<script>
+var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],f={},c=function(t,r){o=function(t){for(var r=new Array(t),e=0;e<t;e+=1){r[e]=new Array(t);for(var n=0;n<t;n+=1)r[e][n]=null}return r}(i=4*e+17),l(0,0),l(i-7,0),l(0,i-7),s(),h(),d(t,r),e>=7&&v(t),null==a&&(a=p(e,n,u)),w(a,r)},l=function(t,r){for(var e=-1;e<=7;e+=1)if(!(t+e<=-1||i<=t+e))for(var n=-1;n<=7;n+=1)r+n<=-1||i<=r+n||(o[t+e][r+n]=0<=e&&e<=6&&(0==n||6==n)||0<=n&&n<=6&&(0==e||6==e)||2<=e&&e<=4&&2<=n&&n<=4)},h=function(){for(var t=8;t<i-8;t+=1)null==o[t][6]&&(o[t][6]=t%2==0);for(var r=8;r<i-8;r+=1)null==o[6][r]&&(o[6][r]=r%2==0)},s=function(){for(var t=B.getPatternPosition(e),r=0;r<t.length;r+=1)for(var n=0;n<t.length;n+=1){var i=t[r],a=t[n];if(null==o[i][a])for(var u=-2;u<=2;u+=1)for(var f=-2;f<=2;f+=1)o[i+u][a+f]=-2==u||2==u||-2==f||2==f||0==u&&0==f}},v=function(t){for(var r=B.getBCHTypeNumber(e),n=0;n<18;n+=1){var a=!t&&1==(r>>n&1);o[Math.floor(n/3)][n%3+i-8-3]=a}for(n=0;n<18;n+=1){a=!t&&1==(r>>n&1);o[n%3+i-8-3][Math.floor(n/3)]=a}},d=function(t,r){for(var e=n<<3|r,a=B.getBCHTypeInfo(e),u=0;u<15;u+=1){var f=!t&&1==(a>>u&1);u<6?o[u][8]=f:u<8?o[u+1][8]=f:o[i-15+u][8]=f}for(u=0;u<15;u+=1){f=!t&&1==(a>>u&1);u<8?o[8][i-u-1]=f:u<9?o[8][15-u-1+1]=f:o[8][15-u-1]=f}o[i-8][8]=!t},w=function(t,r){for(var e=-1,n=i-1,a=7,u=0,f=B.getMaskFunction(r),c=i-1;c>0;c-=2)for(6==c&&(c-=1);;){for(var g=0;g<2;g+=1)if(null==o[n][c-g]){var l=!1;u<t.length&&(l=1==(t[u]>>>a&1)),f(n,c-g)&&(l=!l),o[n][c-g]=l,-1==(a-=1)&&(u+=1,a=7)}if((n+=e)<0||i<=n){n-=e,e=-e;break}}},p=function(t,r,e){for(var n=A.getRSBlocks(t,r),o=b(),i=0;i<e.length;i+=1){var a=e[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var u=0;for(i=0;i<n.length;i+=1)u+=n[i].dataCount;if(o.getLengthInBits()>8*u)throw"code length overflow. ("+o.getLengthInBits()+">"+8*u+")";for(o.getLengthInBits()+4<=8*u&&o.put(0,4);o.getLengthInBits()%8!=0;)o.putBit(!1);for(;!(o.getLengthInBits()>=8*u||(o.put(236,8),o.getLengthInBits()>=8*u));)o.put(17,8);return function(t,r){for(var e=0,n=0,o=0,i=new Array(r.length),a=new Array(r.length),u=0;u<r.length;u+=1){var f=r[u].dataCount,c=r[u].totalCount-f;n=Math.max(n,f),o=Math.max(o,c),i[u]=new Array(f);for(var g=0;g<i[u].length;g+=1)i[u][g]=255&t.getBuffer()[g+e];e+=f;var l=B.getErrorCorrectPolynomial(c),h=k(i[u],l.getLength()-1).mod(l);for(a[u]=new Array(l.getLength()-1),g=0;g<a[u].length;g+=1){var s=g+h.getLength()-a[u].length;a[u][g]=s>=0?h.getAt(s):0}}var v=0;for(g=0;g<r.length;g+=1)v+=r[g].totalCount;var d=new Array(v),w=0;for(g=0;g<n;g+=1)for(u=0;u<r.length;u+=1)g<i[u].length&&(d[w]=i[u][g],w+=1);for(g=0;g<o;g+=1)for(u=0;u<r.length;u+=1)g<a[u].length&&(d[w]=a[u][g],w+=1);return d}(o,n)};f.addData=function(t,r){var e=null;switch(r=r||"Byte"){case"Numeric":e=M(t);break;case"Alphanumeric":e=x(t);break;case"Byte":e=m(t);break;case"Kanji":e=L(t);break;default:throw"mode:"+r}u.push(e),a=null},f.isDark=function(t,r){if(t<0||i<=t||r<0||i<=r)throw t+","+r;return o[t][r]},f.getModuleCount=function(){return i},f.make=function(){if(e<1){for(var t=1;t<40;t++){for(var r=A.getRSBlocks(t,n),o=b(),i=0;i<u.length;i++){var a=u[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var g=0;for(i=0;i<r.length;i++)g+=r[i].dataCount;if(o.getLengthInBits()<=8*g)break}e=t}c(!1,function(){for(var t=0,r=0,e=0;e<8;e+=1){c(!0,e);var n=B.getLostPoint(f);(0==e||t>n)&&(t=n,r=e)}return r}())},f.createTableTag=function(t,r){t=t||2;var e="";e+='<table style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: "+(r=void 0===r?4*t:r)+"px;",e+='">',e+="<tbody>";for(var n=0;n<f.getModuleCount();n+=1){e+="<tr>";for(var o=0;o<f.getModuleCount();o+=1)e+='<td style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: 0px;",e+=" width: "+t+"px;",e+=" height: "+t+"px;",e+=" background-color: ",e+=f.isDark(n,o)?"#000000":"#ffffff",e+=";",e+='"/>';e+="</tr>"}return e+="</tbody>",e+="</table>"},f.createSvgTag=function(t,r,e,n){var o={};"object"==typeof arguments[0]&&(t=(o=arguments[0]).cellSize,r=o.margin,e=o.alt,n=o.title),t=t||2,r=void 0===r?4*t:r,(e="string"==typeof e?{text:e}:e||{}).text=e.text||null,e.id=e.text?e.id||"qrcode-description":null,(n="string"==typeof n?{text:n}:n||{}).text=n.text||null,n.id=n.text?n.id||"qrcode-title":null;var i,a,u,c,g=f.getModuleCount()*t+2*r,l="";for(c="l"+t+",0 0,"+t+" -"+t+",0 0,-"+t+"z ",l+='<svg version="1.1" xmlns="http://www.w3.org/2000/svg"',l+=o.scalable?"":' width="'+g+'px" height="'+g+'px"',l+=' viewBox="0 0 '+g+" "+g+'" ',l+=' preserveAspectRatio="xMinYMin meet"',l+=n.text||e.text?' role="img" aria-labelledby="'+y([n.id,e.id].join(" ").trim())+'"':"",l+=">",l+=n.text?'<title id="'+y(n.id)+'">'+y(n.text)+"</title>":"",l+=e.text?'<description id="'+y(e.id)+'">'+y(e.text)+"</description>":"",l+='<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>',l+='<path d="',a=0;a<f.getModuleCount();a+=1)for(u=a*t+r,i=0;i<f.getModuleCount();i+=1)f.isDark(a,i)&&(l+="M"+(i*t+r)+","+u+c);return l+='" stroke="transparent" fill="black"/>',l+="</svg>"},f.createDataURL=function(t,r){t=t||2,r=void 0===r?4*t:r;var e=f.getModuleCount()*t+2*r,n=r,o=e-r;return I(e,e,function(r,e){if(n<=r&&r<o&&n<=e&&e<o){var i=Math.floor((r-n)/t),a=Math.floor((e-n)/t);return f.isDark(a,i)?0:1}return 1})},f.createImgTag=function(t,r,e){t=t||2,r=void 0===r?4*t:r;var n=f.getModuleCount()*t+2*r,o="";return o+="<img",o+=' src="',o+=f.createDataURL(t,r),o+='"',o+=' width="',o+=n,o+='"',o+=' height="',o+=n,o+='"',e&&(o+=' alt="',o+=y(e),o+='"'),o+="/>"};var y=function(t){for(var r="",e=0;e<t.length;e+=1){var n=t.charAt(e);switch(n){case"<":r+="&lt;";break;case">":r+="&gt;";break;case"&":r+="&amp;";break;case'"':r+="&quot;";break;default:r+=n}}return r};return f.createASCII=function(t,r){if((t=t||1)<2)return function(t){t=void 0===t?2:t;var r,e,n,o,i,a=1*f.getModuleCount()+2*t,u=t,c=a-t,g={"██":"█","█ ":"▀"," █":"▄","  ":" "},l={"██":"▀","█ ":"▀"," █":" ","  ":" "},h="";for(r=0;r<a;r+=2){for(n=Math.floor((r-u)/1),o=Math.floor((r+1-u)/1),e=0;e<a;e+=1)i="█",u<=e&&e<c&&u<=r&&r<c&&f.isDark(n,Math.floor((e-u)/1))&&(i=" "),u<=e&&e<c&&u<=r+1&&r+1<c&&f.isDark(o,Math.floor((e-u)/1))?i+=" ":i+="█",h+=t<1&&r+1>=c?l[i]:g[i];h+="\n"}return a%2&&t>0?h.substring(0,h.length-a-1)+Array(a+1).join("▀"):h.substring(0,h.length-1)}(r);t-=1,r=void 0===r?2*t:r;var e,n,o,i,a=f.getModuleCount()*t+2*r,u=r,c=a-r,g=Array(t+1).join("██"),l=Array(t+1).join("  "),h="",s="";for(e=0;e<a;e+=1){for(o=Math.floor((e-u)/t),s="",n=0;n<a;n+=1)i=1,u<=n&&n<c&&u<=e&&e<c&&f.isDark(o,Math.floor((n-u)/t))&&(i=0),s+=i?g:l;for(o=0;o<t;o+=1)h+=s+"\n"}return h.substring(0,h.length-1)},f.renderTo2dContext=function(t,r){r=r||2;for(var e=f.getModuleCount(),n=0;n<e;n++)for(var o=0;o<e;o++)t.fillStyle=f.isDark(n,o)?"black":"white",t.fillRect(o*r,n*r,r,r)},f};t.stringToBytes=(t.stringToBytesFuncs={default:function(t){for(var r=[],e=0;e<t.length;e+=1){var n=t.charCodeAt(e);r.push(255&n)}return r}}).default,t.createStringToBytes=function(t,r){var e=function(){for(var e=S(t),n=function(){var t=e.read();if(-1==t)throw"eof";return t},o=0,i={};;){var a=e.read();if(-1==a)break;var u=n(),f=n()<<8|n();i[String.fromCharCode(a<<8|u)]=f,o+=1}if(o!=r)throw o+" != "+r;return i}(),n="?".charCodeAt(0);return function(t){for(var r=[],o=0;o<t.length;o+=1){var i=t.charCodeAt(o);if(i<128)r.push(i);else{var a=e[t.charAt(o)];"number"==typeof a?(255&a)==a?r.push(a):(r.push(a>>>8),r.push(255&a)):r.push(n)}}return r}};var r,e,n,o,i,a=1,u=2,f=4,c=8,g={L:1,M:0,Q:3,H:2},l=0,h=1,s=2,v=3,d=4,w=5,p=6,y=7,B=(r=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],e=1335,n=7973,i=function(t){for(var r=0;0!=t;)r+=1,t>>>=1;return r},(o={}).getBCHTypeInfo=function(t){for(var r=t<<10;i(r)-i(e)>=0;)r^=e<<i(r)-i(e);return 21522^(t<<10|r)},o.getBCHTypeNumber=function(t){for(var r=t<<12;i(r)-i(n)>=0;)r^=n<<i(r)-i(n);return t<<12|r},o.getPatternPosition=function(t){return r[t-1]},o.getMaskFunction=function(t){switch(t){case l:return function(t,r){return(t+r)%2==0};case h:return function(t,r){return t%2==0};case s:return function(t,r){return r%3==0};case v:return function(t,r){return(t+r)%3==0};case d:return function(t,r){return(Math.floor(t/2)+Math.floor(r/3))%2==0};case w:return function(t,r){return t*r%2+t*r%3==0};case p:return function(t,r){return(t*r%2+t*r%3)%2==0};case y:return function(t,r){return(t*r%3+(t+r)%2)%2==0};default:throw"bad maskPattern:"+t}},o.getErrorCorrectPolynomial=function(t){for(var r=k([1],0),e=0;e<t;e+=1)r=r.multiply(k([1,C.gexp(e)],0));return r},o.getLengthInBits=function(t,r){if(1<=r&&r<10)switch(t){case a:return 10;case u:return 9;case f:case c:return 8;default:throw"mode:"+t}else if(r<27)switch(t){case a:return 12;case u:return 11;case f:return 16;case c:return 10;default:throw"mode:"+t}else{if(!(r<41))throw"type:"+r;switch(t){case a:return 14;case u:return 13;case f:return 16;case c:return 12;default:throw"mode:"+t}}},o.getLostPoint=function(t){for(var r=t.getModuleCount(),e=0,n=0;n<r;n+=1)for(var o=0;o<r;o+=1){for(var i=0,a=t.isDark(n,o),u=-1;u<=1;u+=1)if(!(n+u<0||r<=n+u))for(var f=-1;f<=1;f+=1)o+f<0||r<=o+f||0==u&&0==f||a==t.isDark(n+u,o+f)&&(i+=1);i>5&&(e+=3+i-5)}for(n=0;n<r-1;n+=1)for(o=0;o<r-1;o+=1){var c=0;t.isDark(n,o)&&(c+=1),t.isDark(n+1,o)&&(c+=1),t.isDark(n,o+1)&&(c+=1),t.isDark(n+1,o+1)&&(c+=1),0!=c&&4!=c||(e+=3)}for(n=0;n<r;n+=1)for(o=0;o<r-6;o+=1)t.isDark(n,o)&&!t.isDark(n,o+1)&&t.isDark(n,o+2)&&t.isDark(n,o+3)&&t.isDark(n,o+4)&&!t.isDark(n,o+5)&&t.isDark(n,o+6)&&(e+=40);for(o=0;o<r;o+=1)for(n=0;n<r-6;n+=1)t.isDark(n,o)&&!t.isDark(n+1,o)&&t.isDark(n+2,o)&&t.isDark(n+3,o)&&t.isDark(n+4,o)&&!t.isDark(n+5,o)&&t.isDark(n+6,o)&&(e+=40);var g=0;for(o=0;o<r;o+=1)for(n=0;n<r;n+=1)t.isDark(n,o)&&(g+=1);return e+=Math.abs(100*g/r/r-50)/5*10},o),C=function(){for(var t=new Array(256),r=new Array(256),e=0;e<8;e+=1)t[e]=1<<e;for(e=8;e<256;e+=1)t[e]=t[e-4]^t[e-5]^t[e-6]^t[e-8];for(e=0;e<255;e+=1)r[t[e]]=e;var n={glog:function(t){if(t<1)throw"glog("+t+")";return r[t]},gexp:function(r){for(;r<0;)r+=255;for(;r>=256;)r-=255;return t[r]}};return n}();function k(t,r){if(void 0===t.length)throw t.length+"/"+r;var e=function(){for(var e=0;e<t.length&&0==t[e];)e+=1;for(var n=new Array(t.length-e+r),o=0;o<t.length-e;o+=1)n[o]=t[o+e];return n}(),n={getAt:function(t){return e[t]},getLength:function(){return e.length},multiply:function(t){for(var r=new Array(n.getLength()+t.getLength()-1),e=0;e<n.getLength();e+=1)for(var o=0;o<t.getLength();o+=1)r[e+o]^=C.gexp(C.glog(n.getAt(e))+C.glog(t.getAt(o)));return k(r,0)},mod:function(t){if(n.getLength()-t.getLength()<0)return n;for(var r=C.glog(n.getAt(0))-C.glog(t.getAt(0)),e=new Array(n.getLength()),o=0;o<n.getLength();o+=1)e[o]=n.getAt(o);for(o=0;o<t.getLength();o+=1)e[o]^=C.gexp(C.glog(t.getAt(o))+r);return k(e,0).mod(t)}};return n}var A=function(){var t=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12,7,37,13],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]],r=function(t,r){var e={};return e.totalCount=t,e.dataCount=r,e},e={};return e.getRSBlocks=function(e,n){var o=function(r,e){switch(e){case g.L:return t[4*(r-1)+0];case g.M:return t[4*(r-1)+1];case g.Q:return t[4*(r-1)+2];case g.H:return t[4*(r-1)+3];default:return}}(e,n);if(void 0===o)throw"bad rs block @ typeNumber:"+e+"/errorCorrectionLevel:"+n;for(var i=o.length/3,a=[],u=0;u<i;u+=1)for(var f=o[3*u+0],c=o[3*u+1],l=o[3*u+2],h=0;h<f;h+=1)a.push(r(c,l));return a},e}(),b=function(){var t=[],r=0,e={getBuffer:function(){return t},getAt:function(r){var e=Math.floor(r/8);return 1==(t[e]>>>7-r%8&1)},put:function(t,r){for(var n=0;n<r;n+=1)e.putBit(1==(t>>>r-n-1&1))},getLengthInBits:function(){return r},putBit:function(e){var n=Math.floor(r/8);t.length<=n&&t.push(0),e&&(t[n]|=128>>>r%8),r+=1}};return e},M=function(t){var r=a,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+2<r.length;)t.put(o(r.substring(n,n+3)),10),n+=3;n<r.length&&(r.length-n==1?t.put(o(r.substring(n,n+1)),4):r.length-n==2&&t.put(o(r.substring(n,n+2)),7))}},o=function(t){for(var r=0,e=0;e<t.length;e+=1)r=10*r+i(t.charAt(e));return r},i=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);throw"illegal char :"+t};return n},x=function(t){var r=u,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+1<r.length;)t.put(45*o(r.charAt(n))+o(r.charAt(n+1)),11),n+=2;n<r.length&&t.put(o(r.charAt(n)),6)}},o=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);if("A"<=t&&t<="Z")return t.charCodeAt(0)-"A".charCodeAt(0)+10;switch(t){case" ":return 36;case"$":return 37;case"%":return 38;case"*":return 39;case"+":return 40;case"-":return 41;case".":return 42;case"/":return 43;case":":return 44;default:throw"illegal char :"+t}};return n},m=function(r){var e=f,n=t.stringToBytes(r),o={getMode:function(){return e},getLength:function(t){return n.length},write:function(t){for(var r=0;r<n.length;r+=1)t.put(n[r],8)}};return o},L=function(r){var e=c,n=t.stringToBytesFuncs.SJIS;if(!n)throw"sjis not supported.";!function(){var t=n("友");if(2!=t.length||38726!=(t[0]<<8|t[1]))throw"sjis not supported."}();var o=n(r),i={getMode:function(){return e},getLength:function(t){return~~(o.length/2)},write:function(t){for(var r=o,e=0;e+1<r.length;){var n=(255&r[e])<<8|255&r[e+1];if(33088<=n&&n<=40956)n-=33088;else{if(!(57408<=n&&n<=60351))throw"illegal char at "+(e+1)+"/"+n;n-=49472}n=192*(n>>>8&255)+(255&n),t.put(n,13),e+=2}if(e<r.length)throw"illegal char at "+(e+1)}};return i},D=function(){var t=[],r={writeByte:function(r){t.push(255&r)},writeShort:function(t){r.writeByte(t),r.writeByte(t>>>8)},writeBytes:function(t,e,n){e=e||0,n=n||t.length;for(var o=0;o<n;o+=1)r.writeByte(t[o+e])},writeString:function(t){for(var e=0;e<t.length;e+=1)r.writeByte(t.charCodeAt(e))},toByteArray:function(){return t},toString:function(){var r="";r+="[";for(var e=0;e<t.length;e+=1)e>0&&(r+=","),r+=t[e];return r+="]"}};return r},S=function(t){var r=t,e=0,n=0,o=0,i={read:function(){for(;o<8;){if(e>=r.length){if(0==o)return-1;throw"unexpected end of file./"+o}var t=r.charAt(e);if(e+=1,"="==t)return o=0,-1;t.match(/^\s$/)||(n=n<<6|a(t.charCodeAt(0)),o+=6)}var i=n>>>o-8&255;return o-=8,i}},a=function(t){if(65<=t&&t<=90)return t-65;if(97<=t&&t<=122)return t-97+26;if(48<=t&&t<=57)return t-48+52;if(43==t)return 62;if(47==t)return 63;throw"c:"+t};return i},I=function(t,r,e){for(var n=function(t,r){var e=t,n=r,o=new Array(t*r),i={setPixel:function(t,r,n){o[r*e+t]=n},write:function(t){t.writeString("GIF87a"),t.writeShort(e),t.writeShort(n),t.writeByte(128),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(255),t.writeByte(255),t.writeByte(255),t.writeString(","),t.writeShort(0),t.writeShort(0),t.writeShort(e),t.writeShort(n),t.writeByte(0);var r=a(2);t.writeByte(2);for(var o=0;r.length-o>255;)t.writeByte(255),t.writeBytes(r,o,255),o+=255;t.writeByte(r.length-o),t.writeBytes(r,o,r.length-o),t.writeByte(0),t.writeString(";")}},a=function(t){for(var r=1<<t,e=1+(1<<t),n=t+1,i=u(),a=0;a<r;a+=1)i.add(String.fromCharCode(a));i.add(String.fromCharCode(r)),i.add(String.fromCharCode(e));var f,c,g,l=D(),h=(f=l,c=0,g=0,{write:function(t,r){if(t>>>r!=0)throw"length over";for(;c+r>=8;)f.writeByte(255&(t<<c|g)),r-=8-c,t>>>=8-c,g=0,c=0;g|=t<<c,c+=r},flush:function(){c>0&&f.writeByte(g)}});h.write(r,n);var s=0,v=String.fromCharCode(o[s]);for(s+=1;s<o.length;){var d=String.fromCharCode(o[s]);s+=1,i.contains(v+d)?v+=d:(h.write(i.indexOf(v),n),i.size()<4095&&(i.size()==1<<n&&(n+=1),i.add(v+d)),v=d)}return h.write(i.indexOf(v),n),h.write(e,n),h.flush(),l.toByteArray()},u=function(){var t={},r=0,e={add:function(n){if(e.contains(n))throw"dup key:"+n;t[n]=r,r+=1},size:function(){return r},indexOf:function(r){return t[r]},contains:function(r){return void 0!==t[r]}};return e};return i}(t,r),o=0;o<r;o+=1)for(var i=0;i<t;i+=1)n.setPixel(i,o,e(i,o));var a=D();n.write(a);for(var u=function(){var t=0,r=0,e=0,n="",o={},i=function(t){n+=String.fromCharCode(a(63&t))},a=function(t){if(t<0);else{if(t<26)return 65+t;if(t<52)return t-26+97;if(t<62)return t-52+48;if(62==t)return 43;if(63==t)return 47}throw"n:"+t};return o.writeByte=function(n){for(t=t<<8|255&n,r+=8,e+=1;r>=6;)i(t>>>r-6),r-=6},o.flush=function(){if(r>0&&(i(t<<6-r),t=0,r=0),e%3!=0)for(var o=3-e%3,a=0;a<o;a+=1)n+="="},o.toString=function(){return n},o}(),f=a.toByteArray(),c=0;c<f.length;c+=1)u.writeByte(f[c]);return u.flush(),"data:image/gif;base64,"+u};return t}();qrcode.stringToBytesFuncs["UTF-8"]=function(t){return function(t){for(var r=[],e=0;e<t.length;e++){var n=t.charCodeAt(e);n<128?r.push(n):n<2048?r.push(192|n>>6,128|63&n):n<55296||n>=57344?r.push(224|n>>12,128|n>>6&63,128|63&n):(e++,n=65536+((1023&n)<<10|1023&t.charCodeAt(e)),r.push(240|n>>18,128|n>>12&63,128|n>>6&63,128|63&n))}return r}(t)},function(t){"function"==typeof define&&define.amd?define([],t):"object"==typeof exports&&(module.exports=t())}(function(){return qrcode});
+</script>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     THE DECK — edit this list to build your session.
+     type:'content'  -> heading + lines
+     type:'prompt'   -> id (short, no spaces), question, hint
+     ============================================================ */
+  const DEFAULT_DECK = [
+    { type:'content', qr:true,
+      heading:'Talk less, think more',
+      lines:[
+        'Twilight CPD — 45 minutes',
+        'Bring one class you are thinking about',
+        'Everything on the screen is anonymous'
+      ]},
+    { type:'prompt', id:'q1',
+      question:'In one sentence: what does a good classroom discussion sound like?',
+      hint:'Short and concrete beats polished. Around 15 words.' },
+    { type:'content',
+      heading:'What the evidence says',
+      lines:[
+        'Structured talk raises the quality of what pupils then write',
+        'Sentence stems shift the burden from ideas to phrasing',
+        'Wait time is the cheapest intervention in the room'
+      ]},
+    { type:'prompt', id:'q2',
+      question:'Which pupils go missing when you open a question to the whole class?',
+      hint:'No names. Describe the pattern you notice.' },
+    { type:'prompt', id:'q3',
+      question:'One thing you will try on Monday.',
+      hint:'Make it small enough that it actually happens.' },
+    { type:'content',
+      heading:'Thank you',
+      lines:[
+        'Slides and the response export go out this evening',
+        'Come and find me if you want a lesson visit'
+      ]}
+  ];
+
+  const MAX_CHARS = 180;
+
+  // The live deck. Starts as the default above; replaced by a saved deck
+  // from shared storage when one exists (see the Edit deck button).
+  let DECK = DEFAULT_DECK;
+  let DECK_REV = 0;
+
+  function deckToText(deck){
+    return deck.map(s => {
+      if(s.type === 'content'){
+        let out = '# ' + s.heading + (s.qr ? ' [qr]' : '');
+        (s.lines || []).forEach(l => { out += '\n- ' + l; });
+        return out;
+      }
+      let out = '? ' + s.question;
+      if(s.hint) out += '\nhint: ' + s.hint;
+      return out;
+    }).join('\n\n');
+  }
+
+  function parseDeck(text){
+    const deck = [], errors = [];
+    let cur = null, qn = 0;
+    String(text).split('\n').forEach((raw, i) => {
+      const line = raw.trim();
+      if(!line) return;
+      if(line.charAt(0) === '#'){
+        let heading = line.replace(/^#+\s*/, '');
+        let qr = false;
+        if(/\[qr\]/i.test(heading)){ qr = true; heading = heading.replace(/\s*\[qr\]\s*/i, ' ').trim(); }
+        if(!heading) errors.push('Line ' + (i+1) + ': a # slide needs a heading');
+        cur = { type:'content', heading, lines:[], qr };
+        deck.push(cur);
+      } else if(line.charAt(0) === '?'){
+        const question = line.replace(/^\?\s*/, '');
+        if(!question) errors.push('Line ' + (i+1) + ': a ? slide needs a question');
+        qn += 1;
+        cur = { type:'prompt', id:'q' + qn, question, hint:'' };
+        deck.push(cur);
+      } else if(/^hint\s*:/i.test(line)){
+        if(cur && cur.type === 'prompt') cur.hint = line.replace(/^hint\s*:\s*/i, '');
+        else errors.push('Line ' + (i+1) + ': "hint:" must sit under a ? question');
+      } else if(line.charAt(0) === '-'){
+        if(cur && cur.type === 'content') cur.lines.push(line.replace(/^-\s*/, ''));
+        else errors.push('Line ' + (i+1) + ': "- " bullets must sit under a # slide');
+      } else {
+        // Forgiving: bare lines become bullets under a # slide, or the hint under a ? slide.
+        if(cur && cur.type === 'content') cur.lines.push(line);
+        else if(cur && cur.type === 'prompt' && !cur.hint) cur.hint = line;
+        else errors.push('Line ' + (i+1) + ': start each slide with # (content) or ? (question)');
+      }
+    });
+    if(!deck.length) errors.push('The deck is empty — add at least one slide.');
+    return { deck, errors };
+  }
+
+  function adoptDeck(saved){
+    if(saved && Array.isArray(saved.deck) && saved.deck.length){
+      DECK = saved.deck;
+      DECK_REV = typeof saved.rev === 'number' ? saved.rev : 1;
+      return true;
+    }
+    return false;
+  }
+
+  // Paste your published link here to hard-wire the QR code, or leave it
+  // blank and set it from the presenter view with the "Join link" button.
+  const JOIN_URL = '';
+
+  // Code required to open the presenter view from inside the app.
+  // Set to '' to remove the gate entirely.
+  const PRESENTER_CODE = 'bigfoot';
+
+  /* ============================================================
+     Storage helpers — every call guarded.
+     Shared data lives in a Firebase Realtime Database (open REST,
+     no accounts needed). Personal data ("me:" keys) lives in this
+     device's localStorage, falling back to memory if blocked.
+     ============================================================ */
+  const DB_BASE = 'https://response-wall-default-rtdb.europe-west1.firebasedatabase.app/response-wall';
+  const dbUrl = key => DB_BASE + '/' + encodeURIComponent(key) + '.json';
+
+  let storageHealthy = true;
+
+  const memLocal = {};
+  function lsGet(key){
+    try{
+      const v = localStorage.getItem('rw:' + key);
+      if(v !== null) return JSON.parse(v);
+    } catch(e){ /* blocked or unparseable — fall through */ }
+    return (key in memLocal) ? memLocal[key] : null;
+  }
+  function lsSet(key, value){
+    memLocal[key] = value;
+    try{ localStorage.setItem('rw:' + key, JSON.stringify(value)); } catch(e){ /* memory only */ }
+    return true;
+  }
+  function lsDel(key){
+    delete memLocal[key];
+    try{ localStorage.removeItem('rw:' + key); } catch(e){ /* ignore */ }
+    return true;
+  }
+  function lsList(prefix){
+    const keys = new Set(Object.keys(memLocal));
+    try{
+      for(let i = 0; i < localStorage.length; i++){
+        const k = localStorage.key(i);
+        if(k && k.indexOf('rw:') === 0) keys.add(k.slice(3));
+      }
+    } catch(e){ /* ignore */ }
+    return Array.from(keys).filter(k => k.indexOf(prefix) === 0);
+  }
+
+  async function sGet(key, shared){
+    if(!shared) return lsGet(key);
+    try{
+      const r = await fetch(dbUrl(key));
+      if(!r.ok){ storageHealthy = false; return null; }
+      storageHealthy = true;
+      const v = await r.json();
+      if(v === null) return null;
+      if(typeof v === 'string'){ try{ return JSON.parse(v); } catch(e){ return v; } }
+      return v;
+    } catch(e){ storageHealthy = false; return null; }
+  }
+  async function sSet(key, value, shared){
+    if(!shared) return lsSet(key, value);
+    try{
+      const r = await fetch(dbUrl(key), { method:'PUT', body: JSON.stringify(JSON.stringify(value)) });
+      storageHealthy = r.ok;
+      return r.ok;
+    } catch(e){ storageHealthy = false; return false; }
+  }
+  async function sDel(key, shared){
+    if(!shared) return lsDel(key);
+    try{
+      const r = await fetch(dbUrl(key), { method:'DELETE' });
+      return r.ok;
+    } catch(e){ return false; }
+  }
+  async function sList(prefix, shared){
+    if(!shared) return lsList(prefix);
+    try{
+      const r = await fetch(DB_BASE + '.json?shallow=true');
+      if(!r.ok){ storageHealthy = false; return []; }
+      storageHealthy = true;
+      const v = await r.json();
+      return v ? Object.keys(v).filter(k => k.indexOf(prefix) === 0) : [];
+    } catch(e){ storageHealthy = false; return []; }
+  }
+
+  const K_JOIN    = 'session:join';
+  const K_SESSION = 'session:state';
+  const K_WALL    = 'session:wall';
+  const K_DECK    = 'session:deck';
+  const P_PENDING = 'pending:';
+
+  const uid = () => Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const clock = ts => new Date(ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  const promptById = id => DECK.find(s => s.type==='prompt' && s.id===id);
+  const promptNumber = id => DECK.filter(s=>s.type==='prompt').findIndex(s=>s.id===id) + 1;
+
+  function cleanUrl(u){
+    return String(u || '')
+      .replace(/#present\b/gi, '')
+      .replace(/#display\b/gi, '')
+      .replace(/([?&])present\b&?/gi, '$1')
+      .replace(/([?&])display\b&?/gi, '$1')
+      .replace(/[?&#]+$/, '');
+  }
+
+  function joinUrl(stored){
+    const candidates = [stored, JOIN_URL, document.referrer, window.location.href];
+    for(const c of candidates){
+      const u = cleanUrl(c);
+      if(/^https?:\/\//i.test(u) && u.indexOf('about:') !== 0) return u;
+    }
+    return '';
+  }
+
+  function qrSvg(text){
+    if(typeof qrcode === 'undefined') return null;
+    try{
+      const q = qrcode(0, 'M');
+      q.addData(text);
+      q.make();
+      const n = q.getModuleCount(), quiet = 3, span = n + quiet * 2;
+      let d = '';
+      for(let r = 0; r < n; r++){
+        for(let c = 0; c < n; c++){
+          if(q.isDark(r, c)) d += 'M' + (c + quiet) + ' ' + (r + quiet) + 'h1v1h-1z';
+        }
+      }
+      return '<svg viewBox="0 0 ' + span + ' ' + span + '" xmlns="http://www.w3.org/2000/svg" ' +
+             'shape-rendering="crispEdges" role="img" aria-label="Scan to join this session">' +
+             '<rect width="' + span + '" height="' + span + '" fill="#FFFFFF"/>' +
+             '<path d="' + d + '" fill="#111111"/></svg>';
+    } catch(e){ return null; }
+  }
+
+  const root = document.getElementById('root');
+
+  let forcedView = null;   // set when switching views inside the app
+  let timers = [];
+  let keyHandler = null;
+
+  function urlWantsPresenter(){
+    const u = (window.location.hash + window.location.search).toLowerCase();
+    return u.indexOf('present') !== -1;
+  }
+  function urlWantsDisplay(){
+    const u = (window.location.hash + window.location.search).toLowerCase();
+    return u.indexOf('display') !== -1;
+  }
+  function currentView(){
+    if(forcedView) return forcedView;
+    if(urlWantsDisplay()) return 'display';
+    if(urlWantsPresenter()) return 'presenter';
+    return 'participant';
+  }
+
+  function every(fn, ms){ timers.push(setInterval(fn, ms)); }
+
+  function switchTo(view){
+    forcedView = view;
+    mount();
+  }
+
+  function mount(){
+    timers.forEach(clearInterval); timers = [];
+    if(keyHandler){ document.removeEventListener('keydown', keyHandler); keyHandler = null; }
+    document.querySelectorAll('.scrim, .toast').forEach(el => el.remove());
+    root.innerHTML = '';
+    const v = currentView();
+    if(v === 'presenter') presenter();
+    else if(v === 'display') display();
+    else participant();
+  }
+
+  /* ============================================================
+     PRESENTER
+     ============================================================ */
+  function presenter(){
+    const state = {
+      slide: 0,
+      allowMultiple: true,
+      moderated: true,
+      epoch: 1,
+      join: '',
+      wall: {},              // promptId -> [{id,text,ts}]
+      pending: new Map(),    // key -> {promptId,text,ts,epoch}
+      fetched: new Set(),
+      rendered: new Set(),
+      modal: null,
+      resetArmed: false,
+      busy: false
+    };
+
+    root.innerHTML = `
+      <div class="stage">
+        <div class="topbar">
+          <span class="brandmark">Response wall — presenter</span>
+          <span class="spacer" style="flex:1"></span>
+          <span class="live" id="live"><span class="dot"></span><span id="live-text">Live</span></span>
+        </div>
+        <div class="stage-body" id="body"></div>
+        <div class="controls">
+          <button class="btn" id="prev" aria-label="Previous slide">&larr;</button>
+          <button class="btn" id="next" aria-label="Next slide">&rarr;</button>
+          <span class="pager" id="pager"></span>
+          <span class="spacer"></span>
+          <span class="toggle" id="mod" role="switch" tabindex="0">
+            <span class="track"></span><span>Check answers before they appear</span>
+          </span>
+          <span class="toggle" id="multi" role="switch" tabindex="0">
+            <span class="track"></span><span>Let people answer more than once</span>
+          </span>
+          <button class="btn" id="deck">Edit deck</button>
+          <button class="btn" id="join">Join link</button>
+          <button class="btn" id="keys">Shortcuts</button>
+          <button class="btn" id="export">Export responses</button>
+          <button class="btn" id="reset">Reset session</button>
+          <button class="btn" id="display-btn">Display view</button>
+          <button class="btn" id="leave">Participant view</button>
+        </div>
+      </div>`;
+
+    const $ = id => document.getElementById(id);
+    const body = $('body');
+
+    /* ---------- rendering ---------- */
+    function render(){
+      const slide = DECK[state.slide];
+      $('pager').textContent = String(state.slide+1).padStart(2,'0') + ' / ' + String(DECK.length).padStart(2,'0');
+      $('multi').classList.toggle('is-on', state.allowMultiple);
+      $('multi').setAttribute('aria-checked', String(state.allowMultiple));
+      $('mod').classList.toggle('is-on', state.moderated);
+      $('mod').setAttribute('aria-checked', String(state.moderated));
+
+      if(slide.type === 'content'){
+        body.className = 'stage-body';
+        body.innerHTML = `
+          <div class="slide content-slide ${slide.qr ? 'has-qr' : ''}">
+            <div>
+              <span class="label">Slide ${state.slide+1}</span>
+              <h1>${esc(slide.heading)}</h1>
+              <ul>${slide.lines.map(l=>`<li>${esc(l)}</li>`).join('')}</ul>
+            </div>
+            ${slide.qr ? qrPanel() : ''}
+          </div>`;
+        const setBtn = document.getElementById('set-join-inline');
+        if(setBtn) setBtn.onclick = openJoin;
+        state.rendered = new Set();
+        return;
+      }
+
+      body.className = state.moderated ? 'stage-body has-queue' : 'stage-body';
+      body.innerHTML = `
+        <div class="slide">
+          <div class="prompt-head">
+            <div style="flex:1">
+              <span class="label">Question ${promptNumber(slide.id)}</span>
+              <h1>${esc(slide.question)}</h1>
+            </div>
+            <div class="tally"><div class="n" id="tally">0</div><span class="label">on the wall</span></div>
+          </div>
+          <div class="wall" id="wall"><div class="wall-inner" id="wall-inner" data-cols="3"></div></div>
+        </div>
+        ${state.moderated ? `
+        <div class="queue">
+          <div class="queue-head">
+            <span class="label">Waiting for you</span>
+            <span class="queue-count" id="qcount">0</span>
+          </div>
+          <div class="queue-list" id="qlist"></div>
+        </div>` : ''}`;
+      state.rendered = new Set();
+      paintWall(true);
+      paintQueue();
+    }
+
+    function qrPanel(){
+      const url = joinUrl(state.join);
+      const svg = url ? qrSvg(url) : null;
+      if(!url){
+        return `<div class="qr-cta">
+          <span class="label">Joining</span>
+          <p>No join link set yet, so there's nothing to scan.</p>
+          <button class="btn btn-primary" id="set-join-inline">Set the join link</button>
+        </div>`;
+      }
+      if(!svg){
+        return `<div class="qr-cta">
+          <span class="label">Joining</span>
+          <p>The code could not be drawn. Read the link out instead:</p>
+          <p class="qr-url">${esc(url)}</p>
+        </div>`;
+      }
+      return `<div class="qr-tile">
+        ${svg}
+        <p class="qr-caption">Scan to join</p>
+        <p class="qr-url">${esc(url)}</p>
+      </div>`;
+    }
+
+    function sizeClass(t){
+      if(t.length <= 40) return 'size-l';
+      if(t.length <= 95) return 'size-m';
+      return 'size-s';
+    }
+
+    function paintWall(fresh){
+      const slide = DECK[state.slide];
+      if(!slide || slide.type !== 'prompt') return;
+      const inner = document.getElementById('wall-inner');
+      const wall = document.getElementById('wall');
+      if(!inner) return;
+      const items = state.wall[slide.id] || [];
+
+      if(fresh){ inner.innerHTML = ''; state.rendered = new Set(); }
+
+      const cols = items.length <= 4 ? 2 : items.length <= 12 ? 3 : 4;
+      inner.setAttribute('data-cols', String(cols));
+
+      if(items.length === 0){
+        if(!inner.querySelector('.empty-wall')){
+          inner.setAttribute('data-cols','1');
+          inner.innerHTML = `<div class="empty-wall"><p>${state.moderated
+            ? 'Nothing on the wall yet. Responses appear here once you show them.'
+            : 'Nothing on the wall yet. Responses appear here as they arrive.'}</p></div>`;
+        }
+      } else {
+        const ph = inner.querySelector('.empty-wall');
+        if(ph) ph.remove();
+        items.forEach((it, i) => {
+          if(state.rendered.has(it.id)) return;
+          const el = document.createElement('div');
+          el.className = 'card ' + sizeClass(it.text);
+          el.innerHTML = `<span class="idx">${String(i+1).padStart(2,'0')}</span><p>${esc(it.text)}</p>`;
+          inner.appendChild(el);
+          state.rendered.add(it.id);
+        });
+      }
+      const t = document.getElementById('tally');
+      if(t) t.textContent = items.length;
+      if(wall && fresh) wall.scrollTop = 0;
+    }
+
+    function pendingSorted(){
+      const cur = DECK[state.slide];
+      const curId = cur && cur.type==='prompt' ? cur.id : null;
+      return Array.from(state.pending.entries())
+        .map(([k,v]) => ({key:k, ...v}))
+        .sort((a,b) => {
+          const ap = a.promptId===curId ? 0 : 1, bp = b.promptId===curId ? 0 : 1;
+          return ap - bp || a.ts - b.ts;
+        });
+    }
+
+    function paintQueue(){
+      const list = document.getElementById('qlist');
+      if(!list) return;
+      const cur = DECK[state.slide];
+      const curId = cur && cur.type==='prompt' ? cur.id : null;
+      const items = pendingSorted();
+      document.getElementById('qcount').textContent = items.length;
+
+      if(items.length === 0){
+        list.innerHTML = `<div class="queue-empty">Nothing waiting.<br>New responses land here first — this queue never appears on the display view.</div>`;
+        return;
+      }
+      list.innerHTML = items.map(it => {
+        const other = it.promptId !== curId;
+        const p = promptById(it.promptId);
+        const tag = other && p ? 'Q' + promptNumber(it.promptId) : 'This question';
+        return `<div class="pending ${other?'is-other':''}" data-key="${esc(it.key)}">
+          <div class="meta"><span>${esc(tag)}</span><span>${clock(it.ts)}</span></div>
+          <p>${esc(it.text)}</p>
+          <div class="actions">
+            <button class="btn btn-show" data-act="show" data-key="${esc(it.key)}">Show it</button>
+            <button class="btn btn-drop" data-act="drop" data-key="${esc(it.key)}">Dismiss</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function toast(msg){
+      const old = document.querySelector('.toast'); if(old) old.remove();
+      const el = document.createElement('div');
+      el.className = 'toast'; el.textContent = msg;
+      document.body.appendChild(el);
+      setTimeout(()=>el.remove(), 2600);
+    }
+
+    function setLive(ok){
+      const l = document.getElementById('live');
+      const t = document.getElementById('live-text');
+      if(!l) return;
+      l.classList.toggle('is-stale', !ok);
+      t.textContent = ok ? 'Live' : 'Storage unavailable';
+    }
+
+    /* ---------- actions ---------- */
+    async function publishSession(){
+      await sSet(K_SESSION, { slide: state.slide, allowMultiple: state.allowMultiple,
+                              moderated: state.moderated, epoch: state.epoch, deckRev: DECK_REV }, true);
+    }
+    async function saveWall(){ await sSet(K_WALL, { epoch: state.epoch, wall: state.wall }, true); }
+
+    async function go(delta){
+      const n = Math.min(DECK.length-1, Math.max(0, state.slide + delta));
+      if(n === state.slide) return;
+      state.slide = n;
+      render();
+      await publishSession();
+    }
+
+    function stage(key, item){
+      const list = state.wall[item.promptId] || (state.wall[item.promptId] = []);
+      list.push({ id: key, text: item.text, ts: item.ts });
+      state.pending.delete(key);
+      state.fetched.add(key);
+    }
+
+    async function promote(key){
+      const item = state.pending.get(key);
+      if(!item) return;
+      stage(key, item);
+      paintWall(false); paintQueue();
+      await saveWall();
+      await sDel(key, true);
+    }
+
+    async function promoteAll(){
+      const keys = Array.from(state.pending.keys());
+      if(!keys.length) return 0;
+      keys.forEach(k => stage(k, state.pending.get(k)));
+      paintWall(false); paintQueue();
+      await saveWall();
+      for(const k of keys){ await sDel(k, true); }
+      return keys.length;
+    }
+
+    async function dismiss(key){
+      state.pending.delete(key);
+      state.fetched.add(key);
+      paintQueue();
+      await sDel(key, true);
+    }
+
+    async function toggleModeration(){
+      state.moderated = !state.moderated;
+      let waiting = 0;
+      if(!state.moderated) waiting = await promoteAll();
+      render();
+      await publishSession();
+      toast(state.moderated
+        ? 'Answers wait for you before they appear'
+        : 'Answers go straight to the wall' + (waiting ? ' — ' + waiting + ' released from the queue' : ''));
+    }
+
+    async function toggleMultiple(){
+      state.allowMultiple = !state.allowMultiple;
+      document.getElementById('multi').classList.toggle('is-on', state.allowMultiple);
+      await publishSession();
+      toast(state.allowMultiple ? 'People can answer more than once' : 'One answer each');
+    }
+
+    async function doReset(){
+      state.busy = true;
+      const keys = await sList(P_PENDING, true);
+      for(const k of keys){ await sDel(k, true); }
+      state.pending.clear(); state.fetched.clear(); state.rendered.clear();
+      state.wall = {};
+      state.epoch += 1;
+      await saveWall();
+      await publishSession();
+      render();
+      state.busy = false;
+      toast('Session cleared — ready for a fresh group');
+    }
+
+    /* ---------- export ---------- */
+    function buildMarkdown(){
+      const now = new Date();
+      const stamp = now.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}) + ', ' +
+                    now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      let out = '# Audience responses\n\n_Exported ' + stamp + '_\n';
+      let total = 0;
+      DECK.filter(s=>s.type==='prompt').forEach((s,i) => {
+        const items = state.wall[s.id] || [];
+        total += items.length;
+        out += '\n## ' + (i+1) + '. ' + s.question + '\n\n';
+        out += items.length
+          ? items.map((it,j) => (j+1) + '. ' + it.text.replace(/\n+/g,' ')).join('\n') + '\n'
+          : '_No responses shown._\n';
+      });
+      out += '\n---\n\n' + total + ' response' + (total===1?'':'s') + ' shown across ' +
+             DECK.filter(s=>s.type==='prompt').length + ' questions.\n';
+      return out;
+    }
+
+    function openExport(){
+      const md = buildMarkdown();
+      openModal(`
+        <span class="label">Export</span>
+        <h2>Responses as markdown</h2>
+        <textarea id="md" readonly></textarea>
+        <div class="row">
+          <button class="btn" data-close="1">Close</button>
+          <button class="btn" id="copy-md">Copy</button>
+          <button class="btn btn-primary" id="dl-md">Download .md</button>
+        </div>`);
+      document.getElementById('md').value = md;
+      document.getElementById('copy-md').onclick = () => {
+        const ta = document.getElementById('md');
+        ta.select();
+        try{
+          if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(md); }
+          else { document.execCommand('copy'); }
+          toast('Copied');
+        } catch(e){ toast('Select the text and copy manually'); }
+      };
+      document.getElementById('dl-md').onclick = () => {
+        try{
+          const blob = new Blob([md], {type:'text/markdown'});
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'responses-' + new Date().toISOString().slice(0,10) + '.md';
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(()=>URL.revokeObjectURL(url), 1000);
+        } catch(e){ toast('Download blocked here — use Copy instead'); }
+      };
+    }
+
+    function toggleTheme(){
+      const dark = root.getAttribute('data-theme') === 'dark';
+      root.setAttribute('data-theme', dark ? 'light' : 'dark');
+      toast(dark ? 'Light' : 'Dark');
+    }
+
+    function openDeckEditor(){
+      openModal(`
+        <span class="label">Deck</span>
+        <h2>Edit the slides</h2>
+        <p class="deck-help">
+          One slide per block, blank line between slides.
+          <code># Heading</code> starts a content slide, with <code>- bullet</code> lines under it.
+          <code>? Question</code> starts a question slide, with an optional <code>hint: …</code> under it.
+          Add <code>[qr]</code> after a heading to show the join code on that slide.
+        </p>
+        <textarea id="deck-text" spellcheck="false" aria-label="Deck text"></textarea>
+        <p class="deck-errors" id="deck-errors" hidden></p>
+        <p class="deck-help" style="margin:0.8rem 0 0;">
+          Saving loads the new deck for everyone and clears the session — wall, queue,
+          and everyone's answers — ready for a fresh group.
+        </p>
+        <div class="row">
+          <button class="btn" data-close="1">Cancel</button>
+          <button class="btn btn-primary" id="deck-save">Save deck &amp; start fresh</button>
+        </div>`);
+      document.getElementById('deck-text').value = deckToText(DECK);
+      document.getElementById('deck-save').onclick = async () => {
+        const parsed = parseDeck(document.getElementById('deck-text').value);
+        const errBox = document.getElementById('deck-errors');
+        if(parsed.errors.length){
+          errBox.hidden = false;
+          errBox.textContent = parsed.errors.slice(0, 4).join('  ·  ');
+          return;
+        }
+        DECK = parsed.deck;
+        DECK_REV += 1;
+        const ok = await sSet(K_DECK, { rev: DECK_REV, deck: DECK }, true);
+        closeModal();
+        if(!ok){ toast('Could not save the deck — storage unavailable'); return; }
+        state.slide = 0;
+        await doReset();
+        toast('New deck loaded — fresh session started');
+      };
+    }
+
+    function openJoin(){
+      const guess = joinUrl(state.join);
+      openModal(`
+        <span class="label">Joining</span>
+        <h2>The link people scan</h2>
+        <p style="color:var(--muted); line-height:1.5; margin:0 0 1rem;">
+          Publish this artifact, copy the link from the address bar, and paste it here.
+          Leave off <code>#present</code> — that part is just for you.
+        </p>
+        <input id="join-input" type="url" placeholder="https://…"
+          style="width:100%; background:var(--card); color:var(--ink); border:1px solid var(--line);
+                 border-radius:8px; padding:0.8rem; font-family:var(--mono); font-size:0.95rem;">
+        <div class="row">
+          <button class="btn" data-close="1">Cancel</button>
+          <button class="btn" id="join-clear">Clear</button>
+          <button class="btn btn-primary" id="join-save">Save link</button>
+        </div>`);
+      const input = document.getElementById('join-input');
+      input.value = state.join || guess || '';
+      input.focus(); input.select();
+      const save = async val => {
+        state.join = cleanUrl(val).trim();
+        await sSet(K_JOIN, { url: state.join }, true);
+        closeModal(); render();
+        toast(state.join ? 'Join link saved' : 'Join link cleared');
+      };
+      document.getElementById('join-save').onclick = () => save(input.value);
+      document.getElementById('join-clear').onclick = () => save('');
+      input.onkeydown = e => { if(e.key === 'Enter') save(input.value); };
+    }
+
+    function openKeys(){
+      openModal(`
+        <span class="label">Presenter</span>
+        <h2>Keyboard shortcuts</h2>
+        <ul class="keys">
+          <li><kbd>&rarr; / space</kbd><span>Next slide</span></li>
+          <li><kbd>&larr;</kbd><span>Previous slide</span></li>
+          <li><kbd>S</kbd><span>Show the response at the top of the queue</span></li>
+          <li><kbd>X</kbd><span>Dismiss the response at the top of the queue</span></li>
+          <li><kbd>M</kbd><span>Turn checking answers on or off</span></li>
+          <li><kbd>R</kbd><span>Allow or block repeat answers</span></li>
+          <li><kbd>E</kbd><span>Export responses</span></li>
+          <li><kbd>T</kbd><span>Switch between light and dark</span></li>
+          <li><kbd>J</kbd><span>Set the join link behind the QR code</span></li>
+          <li><kbd>D</kbd><span>Switch to the clean display view (no queue, no controls — safe to project)</span></li>
+          <li><kbd>Esc</kbd><span>Close this</span></li>
+        </ul>
+        <p style="color:var(--muted); font-size:0.9rem; line-height:1.5; margin:1rem 0 0;">
+          Tip: when screen-sharing, project the <strong>display view</strong> (add <code>#display</code> to
+          the link, or press D) and keep this presenter view on a second window or device for moderating.
+          The two stay in sync automatically.
+        </p>
+        <div class="row"><button class="btn btn-primary" data-close="1">Got it</button></div>`);
+    }
+
+    function openModal(html){
+      closeModal();
+      const scrim = document.createElement('div');
+      scrim.className = 'scrim';
+      scrim.innerHTML = '<div class="modal">' + html + '</div>';
+      scrim.addEventListener('click', e => {
+        if(e.target === scrim || e.target.getAttribute('data-close')) closeModal();
+      });
+      document.body.appendChild(scrim);
+      state.modal = scrim;
+    }
+    function closeModal(){ if(state.modal){ state.modal.remove(); state.modal = null; } }
+
+    /* ---------- wiring ---------- */
+    $('prev').onclick = () => go(-1);
+    $('next').onclick = () => go(1);
+    $('mod').onclick = toggleModeration;
+    $('mod').onkeydown = e => { if(e.key===' '||e.key==='Enter'){ e.preventDefault(); toggleModeration(); } };
+    $('multi').onclick = toggleMultiple;
+    $('multi').onkeydown = e => { if(e.key===' '||e.key==='Enter'){ e.preventDefault(); toggleMultiple(); } };
+    $('export').onclick = openExport;
+    $('deck').onclick = openDeckEditor;
+    $('join').onclick = openJoin;
+    $('keys').onclick = openKeys;
+    $('reset').onclick = function(){
+      if(!state.resetArmed){
+        state.resetArmed = true;
+        this.classList.add('is-armed');
+        this.textContent = 'Clear everything?';
+        setTimeout(()=>{
+          state.resetArmed = false;
+          this.classList.remove('is-armed');
+          this.textContent = 'Reset session';
+        }, 4000);
+        return;
+      }
+      state.resetArmed = false;
+      this.classList.remove('is-armed');
+      this.textContent = 'Reset session';
+      doReset();
+    };
+
+    body.addEventListener('click', e => {
+      const btn = e.target.closest('[data-act]');
+      if(!btn) return;
+      const key = btn.getAttribute('data-key');
+      if(btn.getAttribute('data-act') === 'show') promote(key); else dismiss(key);
+    });
+
+    $('display-btn').onclick = () => switchTo('display');
+    $('leave').onclick = () => switchTo('participant');
+
+    keyHandler = e => {
+      if(e.key === 'Escape'){ closeModal(); return; }
+      if(state.modal) return;
+      const tag = (e.target.tagName || '').toLowerCase();
+      if(tag === 'textarea' || tag === 'input') return;
+      const k = e.key.toLowerCase();
+      if(e.key === 'ArrowRight' || e.key === ' '){ e.preventDefault(); go(1); }
+      else if(e.key === 'ArrowLeft'){ e.preventDefault(); go(-1); }
+      else if(k === 's'){ const top = pendingSorted()[0]; if(top) promote(top.key); }
+      else if(k === 'x'){ const top = pendingSorted()[0]; if(top) dismiss(top.key); }
+      else if(k === 'm'){ toggleModeration(); }
+      else if(k === 'r'){ toggleMultiple(); }
+      else if(k === 'e'){ openExport(); }
+      else if(k === 't'){ toggleTheme(); }
+      else if(k === 'j'){ openJoin(); }
+      else if(k === 'd'){ switchTo('display'); }
+    };
+    document.addEventListener('keydown', keyHandler);
+
+    /* ---------- polling ---------- */
+    let ticking = false;
+    async function tick(){
+      if(ticking || state.busy) return;
+      ticking = true;
+      try{
+        const keys = await sList(P_PENDING, true);
+        const seen = new Set(keys);
+
+        // drop anything another presenter handled
+        let changed = false;
+        for(const k of Array.from(state.pending.keys())){
+          if(!seen.has(k)){ state.pending.delete(k); changed = true; }
+        }
+
+        const fresh = keys.filter(k => !state.pending.has(k) && !state.fetched.has(k)).slice(0, 12);
+        for(const k of fresh){
+          const v = await sGet(k, true);
+          state.fetched.add(k);
+          if(v && v.text){
+            if(v.epoch && v.epoch !== state.epoch){ await sDel(k, true); continue; }
+            state.pending.set(k, v);
+            changed = true;
+          }
+        }
+        if(!state.moderated && state.pending.size){ await promoteAll(); changed = false; }
+        if(changed) paintQueue();
+        setLive(storageHealthy);
+      } finally { ticking = false; }
+    }
+
+    /* ---------- boot ---------- */
+    (async function(){
+      adoptDeck(await sGet(K_DECK, true));
+      const saved = await sGet(K_SESSION, true);
+      const wall  = await sGet(K_WALL, true);
+      const link  = await sGet(K_JOIN, true);
+      if(link && link.url) state.join = link.url;
+      if(saved && typeof saved.epoch === 'number'){
+        state.epoch = saved.epoch;
+        state.allowMultiple = saved.allowMultiple !== false;
+        state.moderated = saved.moderated !== false;
+        if(typeof saved.slide === 'number') state.slide = Math.min(saved.slide, DECK.length-1);
+      }
+      if(wall && wall.epoch === state.epoch && wall.wall) state.wall = wall.wall;
+      render();
+      await publishSession();
+      tick();
+      every(tick, 2000);
+    })();
+  }
+
+  /* ============================================================
+     DISPLAY — clean, read-only view for the projector / shared
+     screen. Follows the presenter's slide and approved wall.
+     Never shows the moderation queue or controls.
+     ============================================================ */
+  function display(){
+    const state = { session:null, epoch:0, wall:{}, join:'', rendered:new Set(), view:'' };
+
+    root.innerHTML = `
+      <div class="stage" style="grid-template-rows:auto 1fr;">
+        <div class="topbar">
+          <span class="brandmark">Response wall</span>
+          <span class="spacer" style="flex:1"></span>
+          <span class="live" id="live"><span class="dot"></span><span id="live-text">Live</span></span>
+          <button class="ghost" id="open-presenter" style="margin-left:1.2rem">Presenter</button>
+        </div>
+        <div class="stage-body" id="body"></div>
+      </div>`;
+
+    const body = document.getElementById('body');
+
+    document.getElementById('open-presenter').onclick = function(){
+      if(!PRESENTER_CODE){ switchTo('presenter'); return; }
+      const bar = this.parentNode;
+      if(bar.querySelector('.gate')) return;
+      const gate = document.createElement('span');
+      gate.className = 'gate';
+      gate.style.marginLeft = '0.8rem';
+      gate.innerHTML = `<input type="password" id="code" aria-label="Presenter code" placeholder="Code">
+                        <button class="btn" id="code-go">Open</button>`;
+      bar.appendChild(gate);
+      const input = document.getElementById('code');
+      input.focus();
+      const attempt = () => {
+        if(input.value.trim().toLowerCase() === PRESENTER_CODE.toLowerCase()){ switchTo('presenter'); }
+        else { input.value = ''; input.placeholder = 'Not that one'; }
+      };
+      document.getElementById('code-go').onclick = attempt;
+      input.onkeydown = e => { if(e.key === 'Enter') attempt(); };
+    };
+
+    function setLive(ok){
+      const l = document.getElementById('live'), t = document.getElementById('live-text');
+      if(!l) return;
+      l.classList.toggle('is-stale', !ok);
+      t.textContent = ok ? 'Live' : 'Reconnecting';
+    }
+
+    function sizeClass(t){
+      if(t.length <= 40) return 'size-l';
+      if(t.length <= 95) return 'size-m';
+      return 'size-s';
+    }
+
+    function qrPanel(){
+      const url = joinUrl(state.join);
+      const svg = url ? qrSvg(url) : null;
+      if(!url || !svg) return '';
+      return `<div class="qr-tile">
+        ${svg}
+        <p class="qr-caption">Scan to join</p>
+        <p class="qr-url">${esc(url)}</p>
+      </div>`;
+    }
+
+    function render(){
+      const idx = state.session && typeof state.session.slide === 'number'
+        ? Math.min(state.session.slide, DECK.length - 1) : -1;
+      const slide = idx >= 0 ? DECK[idx] : null;
+
+      if(!slide){
+        if(state.view === 'wait') return;
+        state.view = 'wait';
+        body.className = 'stage-body';
+        body.innerHTML = `<div class="slide content-slide"><div>
+          <span class="label">Standing by</span>
+          <h1>Waiting for the session to begin.</h1>
+        </div></div>`;
+        state.rendered = new Set();
+        return;
+      }
+
+      if(slide.type === 'content'){
+        const key = 'content:' + idx;
+        if(state.view === key) return;
+        state.view = key;
+        const qr = slide.qr ? qrPanel() : '';
+        body.className = 'stage-body';
+        body.innerHTML = `
+          <div class="slide content-slide ${qr ? 'has-qr' : ''}">
+            <div>
+              <span class="label">Slide ${idx + 1}</span>
+              <h1>${esc(slide.heading)}</h1>
+              <ul>${slide.lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>
+            </div>
+            ${qr}
+          </div>`;
+        state.rendered = new Set();
+        return;
+      }
+
+      const key = 'prompt:' + idx;
+      if(state.view !== key){
+        state.view = key;
+        body.className = 'stage-body';
+        body.innerHTML = `
+          <div class="slide">
+            <div class="prompt-head">
+              <div style="flex:1">
+                <span class="label">Question ${promptNumber(slide.id)}</span>
+                <h1>${esc(slide.question)}</h1>
+              </div>
+              <div class="tally"><div class="n" id="tally">0</div><span class="label">on the wall</span></div>
+            </div>
+            <div class="wall" id="wall"><div class="wall-inner" id="wall-inner" data-cols="3"></div></div>
+          </div>`;
+        state.rendered = new Set();
+      }
+      paintWall(slide);
+    }
+
+    function paintWall(slide){
+      const inner = document.getElementById('wall-inner');
+      if(!inner) return;
+      const items = state.wall[slide.id] || [];
+
+      const cols = items.length <= 4 ? 2 : items.length <= 12 ? 3 : 4;
+      inner.setAttribute('data-cols', String(cols));
+
+      if(items.length === 0){
+        if(!inner.querySelector('.empty-wall')){
+          inner.setAttribute('data-cols','1');
+          inner.innerHTML = `<div class="empty-wall"><p>Nothing on the wall yet.</p></div>`;
+        }
+      } else {
+        const ph = inner.querySelector('.empty-wall');
+        if(ph) ph.remove();
+        items.forEach((it, i) => {
+          if(state.rendered.has(it.id)) return;
+          const el = document.createElement('div');
+          el.className = 'card ' + sizeClass(it.text);
+          el.innerHTML = `<span class="idx">${String(i+1).padStart(2,'0')}</span><p>${esc(it.text)}</p>`;
+          inner.appendChild(el);
+          state.rendered.add(it.id);
+        });
+      }
+      const t = document.getElementById('tally');
+      if(t) t.textContent = items.length;
+    }
+
+    keyHandler = e => {
+      const tag = (e.target.tagName || '').toLowerCase();
+      if(tag === 'textarea' || tag === 'input') return;
+      if(e.key.toLowerCase() === 't'){
+        const dark = root.getAttribute('data-theme') === 'dark';
+        root.setAttribute('data-theme', dark ? 'light' : 'dark');
+      }
+    };
+    document.addEventListener('keydown', keyHandler);
+
+    let ticking = false;
+    async function tick(){
+      if(ticking) return;
+      ticking = true;
+      try{
+        const s = await sGet(K_SESSION, true);
+        setLive(storageHealthy);
+        if(s && typeof s.epoch === 'number'){
+          if(typeof s.deckRev === 'number' && s.deckRev !== DECK_REV){
+            if(adoptDeck(await sGet(K_DECK, true)) || s.deckRev === 0){
+              DECK_REV = s.deckRev;
+              state.view = '';
+              state.rendered = new Set();
+            }
+          }
+          if(s.epoch !== state.epoch){
+            state.epoch = s.epoch;
+            state.wall = {};
+            state.rendered = new Set();
+            state.view = '';
+          }
+          state.session = s;
+        }
+        const w = await sGet(K_WALL, true);
+        if(w && w.epoch === state.epoch && w.wall) state.wall = w.wall;
+        if(!state.join){
+          const link = await sGet(K_JOIN, true);
+          if(link && link.url) state.join = link.url;
+        }
+        render();
+      } finally { ticking = false; }
+    }
+
+    (async function(){
+      render();
+      await tick();
+      every(tick, 2000);
+    })();
+  }
+
+  /* ============================================================
+     PARTICIPANT
+     ============================================================ */
+  function participant(){
+    const state = { session:null, me:null, submitted:new Set(), epoch:0, sending:false, lastSent:'', view:'' };
+
+    root.innerHTML = `
+      <div class="join">
+        <div class="join-head">
+          <span class="brandmark">Your response</span>
+          <span class="live" id="live"><span class="dot"></span><span id="live-text">Connected</span></span>
+        </div>
+        <div class="join-body" id="jbody"></div>
+        <div class="join-foot">
+          Responses are anonymous but shared — everyone in the room sees what the presenter chooses to show.
+          <button class="ghost" id="open-presenter">Presenter</button>
+        </div>
+      </div>`;
+
+    document.getElementById('open-presenter').onclick = function(){
+      if(!PRESENTER_CODE){ switchTo('presenter'); return; }
+      const foot = this.parentNode;
+      if(foot.querySelector('.gate')) return;
+      const gate = document.createElement('span');
+      gate.className = 'gate';
+      gate.innerHTML = `<input type="password" id="code" aria-label="Presenter code" placeholder="Code">
+                        <button class="btn" id="code-go">Open</button>`;
+      foot.appendChild(gate);
+      const input = document.getElementById('code');
+      input.focus();
+      const attempt = () => {
+        if(input.value.trim().toLowerCase() === PRESENTER_CODE.toLowerCase()){ switchTo('presenter'); }
+        else { input.value = ''; input.placeholder = 'Not that one'; }
+      };
+      document.getElementById('code-go').onclick = attempt;
+      input.onkeydown = e => { if(e.key === 'Enter') attempt(); };
+    };
+
+    const jbody = document.getElementById('jbody');
+
+    function setLive(ok){
+      const l = document.getElementById('live'), t = document.getElementById('live-text');
+      l.classList.toggle('is-stale', !ok);
+      t.textContent = ok ? 'Connected' : 'Reconnecting';
+    }
+
+    function draw(){
+      const s = state.session;
+      const slide = s && typeof s.slide === 'number' ? DECK[s.slide] : null;
+      const key = !slide ? 'wait' :
+                  slide.type === 'content' ? 'content:' + s.slide :
+                  (state.submitted.has(slide.id) ? 'done:' + slide.id : 'ask:' + slide.id);
+      if(key === state.view) return;
+      state.view = key;
+
+      if(!slide){
+        jbody.innerHTML = `<div class="waiting">
+          <span class="label">Standing by</span>
+          <h1>Waiting for the presenter to begin.</h1>
+          <p class="hint">Keep this page open. The question will appear here.</p>
+        </div>`;
+        return;
+      }
+
+      if(slide.type === 'content'){
+        jbody.innerHTML = `<div class="waiting">
+          <span class="label">Now on screen</span>
+          <h1>${esc(slide.heading)}</h1>
+          <p class="hint">Nothing to answer just yet — the next question will land here.</p>
+        </div>`;
+        return;
+      }
+
+      if(state.submitted.has(slide.id)){
+        const again = state.session.allowMultiple !== false;
+        jbody.innerHTML = `<div class="sent">
+          <span class="label">Sent</span>
+          <h2>That's with the presenter.</h2>
+          <blockquote>${esc(state.lastSent || '')}</blockquote>
+          <p>${state.session.moderated === false
+              ? 'It is up on the screen now.'
+              : 'Nothing goes on the screen until the presenter shows it.'}</p>
+          ${again ? '<button class="btn btn-primary" id="again">Add another</button>'
+                  : '<p style="margin:0"><em>One answer each for this question.</em></p>'}
+        </div>`;
+        const b = document.getElementById('again');
+        if(b) b.onclick = () => { state.submitted.delete(slide.id); state.view=''; draw(); };
+        return;
+      }
+
+      jbody.innerHTML = `<div class="composer">
+        <span class="label">Question ${promptNumber(slide.id)}</span>
+        <h1>${esc(slide.question)}</h1>
+        <p class="hint">${esc(slide.hint || '')}</p>
+        <textarea id="ta" maxlength="${MAX_CHARS}" placeholder="Type your answer…"
+          aria-label="Your answer"></textarea>
+        <div class="row">
+          <span class="counter" id="count">0 / ${MAX_CHARS}</span>
+          <button class="btn btn-primary" id="send" disabled>Send</button>
+        </div>
+      </div>`;
+
+      const ta = document.getElementById('ta');
+      const send = document.getElementById('send');
+      const count = document.getElementById('count');
+      ta.focus();
+      ta.oninput = () => {
+        const n = ta.value.length;
+        count.textContent = n + ' / ' + MAX_CHARS;
+        count.classList.toggle('is-near', n > MAX_CHARS - 30);
+        send.disabled = ta.value.trim().length === 0;
+      };
+      ta.onkeydown = e => {
+        if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); if(!send.disabled) submit(slide.id, ta.value); }
+      };
+      send.onclick = () => submit(slide.id, ta.value);
+    }
+
+    async function submit(promptId, text){
+      const clean = text.trim().slice(0, MAX_CHARS);
+      if(!clean || state.sending) return;
+      state.sending = true;
+      const ok = await sSet(P_PENDING + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,7),
+                            { promptId, text: clean, ts: Date.now(), epoch: state.epoch }, true);
+      state.sending = false;
+      if(!ok){ setLive(false); return; }
+      state.lastSent = clean;
+      state.submitted.add(promptId);
+      await saveMine();
+      state.view = '';
+      draw();
+    }
+
+    async function saveMine(){
+      await sSet('me:submissions', { epoch: state.epoch, ids: Array.from(state.submitted) }, false);
+    }
+
+    let ticking = false;
+    async function tick(){
+      if(ticking) return;
+      ticking = true;
+      try{
+        const s = await sGet(K_SESSION, true);
+        setLive(storageHealthy);
+        if(!s){ ticking = false; return; }
+        if(typeof s.deckRev === 'number' && s.deckRev !== DECK_REV){
+          if(adoptDeck(await sGet(K_DECK, true)) || s.deckRev === 0){
+            DECK_REV = s.deckRev;
+            state.view = '';
+          }
+        }
+        if(s.epoch !== state.epoch){
+          state.epoch = s.epoch;
+          state.submitted = new Set();
+          state.lastSent = '';
+          state.view = '';
+          await saveMine();
+        }
+        state.session = s;
+        draw();
+      } finally { ticking = false; }
+    }
+
+    (async function(){
+      adoptDeck(await sGet(K_DECK, true));
+      const mine = await sGet('me:submissions', false);
+      const s = await sGet(K_SESSION, true);
+      state.epoch = (s && s.epoch) || 1;
+      if(mine && mine.epoch === state.epoch && Array.isArray(mine.ids)) state.submitted = new Set(mine.ids);
+      state.session = s;
+      draw();
+      every(tick, 3000);
+    })();
+  }
+
+  mount();
+  window.addEventListener('hashchange', () => { forcedView = null; mount(); });
+})();
+</script>
