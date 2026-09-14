@@ -1,0 +1,224 @@
+<script>
+/* =====================================================================
+   WALL LAYER — joins this deck to the Response Wall session.
+
+   What it does:
+     · publishes the deck (content + questions) so phones know what to ask
+     · writes the live slide position as you navigate
+     · reads approved responses and paints them on the question slides
+     · follows the moderator phone when it drives the deck remotely
+
+   What it deliberately does not do: show the moderation queue. This page
+   is the projected surface. Unapproved text never reaches it.
+
+   The engine above is untouched — slide changes are picked up by observing
+   the active class, so rebuilding the deck from the skill will not break
+   this and this will not break the deck.
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  const DB_BASE  = 'https://response-wall-default-rtdb.europe-west1.firebasedatabase.app/response-wall';
+  const dbUrl    = k => DB_BASE + '/' + encodeURIComponent(k) + '.json';
+  const K_STATE  = 'session:state';
+  const K_WALL   = 'session:wall';
+  const K_DECK   = 'session:deck';
+  const K_JOIN   = 'session:join';
+  const JOIN_URL = 'https://jrodgers-edu.github.io/Response-Wall/';
+
+  /* Bumped whenever the questions change. Phones compare this and re-read
+     the deck, so a stale tab catches up without being reloaded. */
+  const DECK_REV = 20260911;
+  const MAX_CARDS = 20;
+
+  let healthy = true;
+
+  async function sGet(key){
+    try{
+      const r = await fetch(dbUrl(key));
+      if(!r.ok){ healthy = false; return null; }
+      healthy = true;
+      const v = await r.json();
+      if(v === null) return null;
+      if(typeof v === 'string'){ try{ return JSON.parse(v); }catch(e){ return v; } }
+      return v;
+    }catch(e){ healthy = false; return null; }
+  }
+  async function sSet(key, value){
+    try{
+      const r = await fetch(dbUrl(key), { method:'PUT', body: JSON.stringify(JSON.stringify(value)) });
+      healthy = r.ok;
+      return r.ok;
+    }catch(e){ healthy = false; return false; }
+  }
+
+  const esc = s => String(s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  /* ---------- read the deck out of the slides themselves ----------
+     One source of truth: the HTML. Phones get their questions from here,
+     so the wording can never drift between the screen and the handset. */
+  const slideEls = [...document.querySelectorAll('.slide')];
+  const RW_DECK = slideEls.map(el => {
+    if(el.classList.contains('wallslide')){
+      return { type:'prompt',
+               id:       el.dataset.prompt,
+               question: el.dataset.question,
+               hint:     el.dataset.hint || '' };
+    }
+    const h = el.querySelector('h1, h2');
+    return { type:'content',
+             heading: (h ? h.textContent : 'Cornwall Research School').trim().replace(/\s+/g,' '),
+             lines: [] };
+  });
+  const promptNumber = id =>
+    RW_DECK.filter(s => s.type === 'prompt').findIndex(s => s.id === id) + 1;
+
+  /* ---------- session state ---------- */
+  const S = { epoch:1, seq:0, slide:0, wall:{}, rendered:new Map(), painted:new Set(), started:false };
+
+  function currentIndex(){
+    const a = document.querySelector('.slide.active');
+    return a ? slideEls.indexOf(a) : 0;
+  }
+
+  async function publishState(){
+    S.seq += 1;
+    await sSet(K_STATE, { slide: S.slide, epoch: S.epoch, seq: S.seq, src: 'deck',
+                          moderated: true, allowMultiple: true, deckRev: DECK_REV });
+  }
+
+  /* ---------- painting a question slide ---------- */
+  function sizeClass(t){
+    if(t.length <= 40) return 'size-l';
+    if(t.length <= 95) return 'size-m';
+    return 'size-s';
+  }
+  const CARD_COLOURS = ['#E94E1D','#1D6FB8','#2EA5DE','#FAB60B','#BD1823'];
+
+  function paint(el){
+    const id    = el.dataset.prompt;
+    const grid  = el.querySelector('.wallgrid');
+    const tally = el.querySelector('.walltally .n');
+    if(!grid) return;
+
+    const items = S.wall[id] || [];
+    if(tally) tally.textContent = items.length;
+
+    /* the first answers are the ones read aloud, so give them room */
+    const cols = items.length <= 2 ? 1 : items.length <= 6 ? 2 : items.length <= 12 ? 3 : 4;
+    grid.style.setProperty('--cols', cols);
+    grid.toggleAttribute('data-dense',  items.length > 8);
+    grid.toggleAttribute('data-denser', items.length > 14);
+
+    let seen = S.rendered.get(id);
+    if(!seen){ seen = new Set(); S.rendered.set(id, seen); }
+
+    /* a response taken down from the phone must leave the screen too */
+    if(items.length < seen.size){ grid.innerHTML = ''; seen.clear(); }
+
+    if(!items.length){
+      if(!grid.querySelector('.wallempty')){
+        grid.innerHTML = '<div class="wallempty"><strong>Nothing on the wall yet.</strong>' +
+                         '<span>Scan, type, and it arrives here once I show it.</span></div>';
+      }
+      return;
+    }
+
+    const empty = grid.querySelector('.wallempty');
+    if(empty) empty.remove();
+
+    items.forEach((it, i) => {
+      if(seen.has(it.id) || i >= MAX_CARDS) return;
+      const card = document.createElement('div');
+      card.className = 'wc ' + sizeClass(it.text);
+      card.style.setProperty('--c', CARD_COLOURS[i % CARD_COLOURS.length]);
+      card.innerHTML = '<span class="n">' + String(i+1).padStart(2,'0') + '</span><p>' + esc(it.text) + '</p>';
+      const more = grid.querySelector('.wallmore');
+      if(more) grid.insertBefore(card, more); else grid.appendChild(card);
+      seen.add(it.id);
+    });
+
+    const overflow = items.length - MAX_CARDS;
+    let more = grid.querySelector('.wallmore');
+    if(overflow > 0){
+      if(!more){ more = document.createElement('div'); more.className = 'wallmore'; grid.appendChild(more); }
+      more.textContent = 'and ' + overflow + ' more on the wall';
+    } else if(more){ more.remove(); }
+  }
+
+  function repaintActive(){
+    const a = document.querySelector('.slide.active');
+    if(a && a.classList.contains('wallslide')) paint(a);
+  }
+
+  function clearWall(){
+    S.wall = {};
+    S.rendered = new Map();
+    document.querySelectorAll('.wallslide .wallgrid').forEach(g => { g.innerHTML = ''; });
+    document.querySelectorAll('.wallslide .walltally .n').forEach(n => { n.textContent = '0'; });
+    repaintActive();
+  }
+
+  function setStale(bad){
+    const chip = document.getElementById('wallstale');
+    if(chip) chip.classList.toggle('show', !!bad);
+  }
+
+  /* ---------- follow the deck's own navigation ---------- */
+  const observer = new MutationObserver(() => {
+    const n = currentIndex();
+    if(n === S.slide) return;
+    S.slide = n;
+    repaintActive();
+    publishState();
+  });
+  slideEls.forEach(el => observer.observe(el, { attributes:true, attributeFilter:['class'] }));
+
+  /* ---------- poll ---------- */
+  let ticking = false;
+  async function tick(){
+    if(ticking) return;
+    ticking = true;
+    try{
+      const st = await sGet(K_STATE);
+      setStale(!healthy);
+      if(st){
+        if(typeof st.epoch === 'number' && st.epoch !== S.epoch){
+          S.epoch = st.epoch;
+          clearWall();
+        }
+        /* the moderator phone driving the deck from the back of the room */
+        if(st.src === 'mod' && typeof st.seq === 'number' && st.seq > S.seq){
+          S.seq = st.seq;
+          if(typeof st.slide === 'number' && st.slide !== currentIndex() && typeof window.go === 'function'){
+            window.go(st.slide);
+          }
+        }
+      }
+      const w = await sGet(K_WALL);
+      if(w && w.wall && (w.epoch === S.epoch || typeof w.epoch !== 'number')){
+        S.wall = w.wall;
+        repaintActive();
+      }
+    } finally { ticking = false; }
+  }
+
+  /* ---------- start ---------- */
+  (async function(){
+    document.querySelectorAll('.wallqr img').forEach(img => { img.src = window.JOIN_QR || ''; });
+
+    const st = await sGet(K_STATE);
+    S.epoch = (st && typeof st.epoch === 'number') ? st.epoch : 1;
+    S.seq   = (st && typeof st.seq === 'number')   ? st.seq   : 0;
+    S.slide = currentIndex();
+
+    await sSet(K_DECK, { rev: DECK_REV, deck: RW_DECK });
+    await sSet(K_JOIN, { url: JOIN_URL });
+    await publishState();
+
+    await tick();
+    setInterval(tick, 2000);
+  })();
+})();
+</script>

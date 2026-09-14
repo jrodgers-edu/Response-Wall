@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1b1b1b">
+<title>Moderate · ShREC response wall</title>
+<style>
+/* =====================================================================
+   PHONE MODERATOR for the ShREC deck.
+
+   The laptop shows the presentation and only ever paints approved
+   responses. Everything unmoderated lives here, in your hand. Nothing
+   on this page is ever projected.
+   ===================================================================== */
+:root{
+  --orange:#E94E1D; --yellow:#FAB60B; --blue:#1D6FB8; --sky:#2EA5DE; --red:#BD1823;
+  --bg:#161616; --panel:#232323; --line:#343434; --text:#f2f0ec; --dim:#9b9b9b;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);
+  font:400 16px/1.45 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  display:flex;flex-direction:column;overscroll-behavior:none}
+
+/* ---------- header ---------- */
+header{position:sticky;top:0;z-index:10;background:rgba(22,22,22,.97);
+  border-bottom:1px solid var(--line);padding:max(10px,env(safe-area-inset-top)) 14px 10px;
+  backdrop-filter:blur(8px)}
+/* built for a phone in the hand; capped so it stays sane on a laptop */
+header>*,main>*,footer>*{max-width:600px;margin-left:auto;margin-right:auto}
+footer{justify-content:center}
+.top{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.mark{font-weight:800;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--orange)}
+.live{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim)}
+.live i{width:8px;height:8px;border-radius:50%;background:#4ac26b;display:block}
+.live.stale i{background:var(--red)}
+.live.stale{color:var(--red)}
+
+.nav{display:flex;align-items:center;gap:9px}
+.nav button{flex:0 0 52px;height:52px;border-radius:14px;border:1px solid var(--line);
+  background:var(--panel);color:var(--text);font-size:22px;cursor:pointer}
+.nav button:active{background:#2e2e2e}
+.now{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;padding:8px 12px}
+.now .lab{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--orange)}
+.now .q{font-size:13.5px;line-height:1.3;margin-top:2px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.now.content .lab{color:var(--dim)}
+
+/* ---------- queue ---------- */
+main{flex:1;overflow-y:auto;padding:12px 14px 8px;-webkit-overflow-scrolling:touch}
+.countline{display:flex;align-items:baseline;gap:8px;margin:2px 2px 12px}
+.countline b{font-size:26px;font-weight:800;color:var(--orange);line-height:1}
+.countline span{font-size:12px;color:var(--dim);letter-spacing:.04em}
+.item{background:var(--panel);border:1px solid var(--line);border-radius:16px;
+  padding:14px 15px 12px;margin-bottom:11px;border-left:4px solid var(--orange)}
+.item.other{border-left-color:var(--dim);opacity:.82}
+.item .tag{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--orange);display:block;margin-bottom:6px}
+.item.other .tag{color:var(--dim)}
+.item p{font-size:16.5px;line-height:1.4;overflow-wrap:break-word}
+.row{display:flex;gap:9px;margin-top:12px}
+.row button{flex:1;height:46px;border-radius:12px;border:none;font-size:15px;font-weight:600;
+  cursor:pointer;font-family:inherit}
+.show{background:var(--orange);color:#fff}
+.hide{background:#2e2e2e;color:var(--dim);flex:0 0 96px}
+.row button:active{transform:scale(.98)}
+
+.empty{text-align:center;color:#6d6d6d;padding:44px 20px;font-style:italic;line-height:1.6}
+
+/* ---------- what is already up ---------- */
+.shown{margin-top:22px;border-top:1px solid var(--line);padding-top:16px}
+.shown h2{font-size:11px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:10px}
+.up{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid #262626}
+.up p{flex:1;font-size:13.5px;color:#c9c9c9;line-height:1.35}
+.up button{flex:0 0 auto;background:none;border:1px solid var(--line);color:var(--dim);
+  border-radius:9px;font-size:11.5px;padding:6px 10px;cursor:pointer;font-family:inherit}
+.up button:active{color:var(--red);border-color:var(--red)}
+
+/* ---------- footer ---------- */
+footer{border-top:1px solid var(--line);background:rgba(22,22,22,.97);
+  padding:10px 14px max(10px,env(safe-area-inset-bottom));display:flex;gap:8px;
+  backdrop-filter:blur(8px)}
+footer button{flex:1;max-width:200px;height:46px;border-radius:12px;border:1px solid var(--line);
+  background:var(--panel);color:var(--text);font-size:13.5px;font-weight:600;
+  cursor:pointer;font-family:inherit}
+footer button.primary{background:var(--orange);border-color:var(--orange);color:#fff}
+footer button.danger{color:var(--red)}
+footer button:disabled{opacity:.4}
+
+/* ---------- gate + sheet ---------- */
+.gate{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:30px}
+.gate h1{font-size:20px;font-weight:700}
+.gate p{color:var(--dim);font-size:14px;text-align:center;max-width:32ch}
+.gate input{width:min(280px,80vw);height:52px;border-radius:14px;border:1px solid var(--line);
+  background:var(--panel);color:var(--text);font-size:17px;text-align:center;font-family:inherit}
+.gate button{width:min(280px,80vw);height:50px;border-radius:14px;border:none;
+  background:var(--orange);color:#fff;font-size:16px;font-weight:600;font-family:inherit}
+
+.sheet{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.72);display:flex;
+  align-items:flex-end;justify-content:center;padding:0}
+.sheet .card{background:var(--panel);border-radius:20px 20px 0 0;width:100%;max-width:560px;
+  padding:22px 18px max(22px,env(safe-area-inset-bottom));max-height:86vh;
+  display:flex;flex-direction:column;gap:12px}
+.sheet h2{font-size:17px;font-weight:700}
+.sheet p{font-size:14px;color:var(--dim);line-height:1.5}
+.sheet textarea{width:100%;flex:1;min-height:180px;background:#1b1b1b;color:var(--text);
+  border:1px solid var(--line);border-radius:12px;padding:12px;font-size:12.5px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;line-height:1.5;resize:none}
+.sheet .acts{display:flex;gap:9px}
+.sheet .acts button{flex:1;height:48px;border-radius:12px;border:1px solid var(--line);
+  background:#2b2b2b;color:var(--text);font-size:15px;font-weight:600;font-family:inherit}
+.sheet .acts button.primary{background:var(--orange);border-color:var(--orange);color:#fff}
+.sheet .acts button.danger{background:var(--red);border-color:var(--red);color:#fff}
+
+.toast{position:fixed;left:50%;bottom:78px;transform:translateX(-50%);z-index:80;
+  background:#000;color:#fff;padding:11px 18px;border-radius:24px;font-size:13.5px;
+  box-shadow:0 10px 30px rgba(0,0,0,.5);max-width:86vw;text-align:center}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <h1>Moderator</h1>
+  <p>Everything unmoderated lives here. Nothing on this page reaches the screen until you show it.</p>
+  <input type="password" id="code" placeholder="Presenter code" autocomplete="off"
+         autocapitalize="off" spellcheck="false">
+  <button id="go">Open</button>
+</div>
+
+<header hidden id="hdr">
+  <div class="top">
+    <span class="mark">ShREC &middot; moderator</span>
+    <span class="live" id="live"><i></i><span id="livetext">Live</span></span>
+  </div>
+  <div class="nav">
+    <button id="prev" aria-label="Previous slide">&#8249;</button>
+    <div class="now" id="now"><span class="lab">Standing by</span><div class="q">Waiting for the deck</div></div>
+    <button id="next" aria-label="Next slide">&#8250;</button>
+  </div>
+</header>
+
+<main hidden id="main">
+  <div class="countline"><b id="qn">0</b><span id="qlabel">waiting to be shown</span></div>
+  <div id="queue"></div>
+  <div class="shown" id="shownwrap" hidden>
+    <h2>On the wall for this question</h2>
+    <div id="shown"></div>
+  </div>
+</main>
+
+<footer hidden id="ftr">
+  <button class="primary" id="showall">Show all</button>
+  <button id="export">Export</button>
+  <button class="danger" id="reset">New group</button>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  const DB_BASE = 'https://response-wall-default-rtdb.europe-west1.firebasedatabase.app/response-wall';
+  const dbUrl   = k => DB_BASE + '/' + encodeURIComponent(k) + '.json';
+  const K_STATE = 'session:state', K_WALL = 'session:wall', K_DECK = 'session:deck';
+  const P_PEND  = 'pending:';
+  const CODE    = 'bigfoot';
+
+  let healthy = true;
+
+  async function sGet(key){
+    try{
+      const r = await fetch(dbUrl(key));
+      if(!r.ok){ healthy = false; return null; }
+      healthy = true;
+      const v = await r.json();
+      if(v === null) return null;
+      if(typeof v === 'string'){ try{ return JSON.parse(v); }catch(e){ return v; } }
+      return v;
+    }catch(e){ healthy = false; return null; }
+  }
+  async function sSet(key, value){
+    try{
+      const r = await fetch(dbUrl(key), { method:'PUT', body: JSON.stringify(JSON.stringify(value)) });
+      healthy = r.ok; return r.ok;
+    }catch(e){ healthy = false; return false; }
+  }
+  async function sDel(key){
+    try{ return (await fetch(dbUrl(key), { method:'DELETE' })).ok; }catch(e){ return false; }
+  }
+  async function sList(prefix){
+    try{
+      const r = await fetch(DB_BASE + '.json?shallow=true');
+      if(!r.ok){ healthy = false; return []; }
+      healthy = true;
+      const v = await r.json();
+      return v ? Object.keys(v).filter(k => k.indexOf(prefix) === 0) : [];
+    }catch(e){ healthy = false; return []; }
+  }
+
+  const esc = s => String(s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const $ = id => document.getElementById(id);
+
+  const S = { deck:[], state:null, epoch:1, seq:0, slide:0,
+              pending:new Map(), fetched:new Set(), wall:{}, busy:false, dirty:true };
+
+  const prompts     = () => S.deck.filter(s => s.type === 'prompt');
+  const promptById  = id => S.deck.find(s => s.type === 'prompt' && s.id === id);
+  const promptNo    = id => prompts().findIndex(s => s.id === id) + 1;
+  const currentSlide= () => S.deck[S.slide] || null;
+  const currentQ    = () => { const s = currentSlide(); return s && s.type === 'prompt' ? s : null; };
+
+  function toast(msg){
+    const old = document.querySelector('.toast'); if(old) old.remove();
+    const el = document.createElement('div');
+    el.className = 'toast'; el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2600);
+  }
+
+  function setLive(){
+    const l = $('live');
+    l.classList.toggle('stale', !healthy);
+    $('livetext').textContent = healthy ? 'Live' : 'Reconnecting';
+  }
+
+  /* ---------- rendering ---------- */
+  function renderNow(){
+    const now = $('now'), s = currentSlide(), q = currentQ();
+    now.classList.toggle('content', !q);
+    if(!s){
+      now.innerHTML = '<span class="lab">Standing by</span><div class="q">Waiting for the deck</div>';
+    } else if(q){
+      now.innerHTML = '<span class="lab">Question ' + promptNo(q.id) + ' of ' + prompts().length +
+                      '</span><div class="q">' + esc(q.question) + '</div>';
+    } else {
+      now.innerHTML = '<span class="lab">Slide ' + (S.slide + 1) + ' &middot; no question</span>' +
+                      '<div class="q">' + esc(s.heading || '') + '</div>';
+    }
+  }
+
+  function sorted(){
+    const cur = currentQ(), curId = cur ? cur.id : null;
+    return Array.from(S.pending.entries())
+      .map(([k, v]) => ({ key:k, ...v }))
+      .sort((a, b) => {
+        const ap = a.promptId === curId ? 0 : 1, bp = b.promptId === curId ? 0 : 1;
+        return ap !== bp ? ap - bp : a.ts - b.ts;
+      });
+  }
+
+  function renderQueue(){
+    const items = sorted(), cur = currentQ(), curId = cur ? cur.id : null;
+    $('qn').textContent = items.length;
+    $('qlabel').textContent = items.length === 1 ? 'waiting to be shown' : 'waiting to be shown';
+    $('showall').disabled = !items.length;
+
+    const box = $('queue');
+    if(!items.length){
+      box.innerHTML = '<div class="empty">Nothing waiting.<br>Responses land here the moment someone sends one.</div>';
+    } else {
+      box.innerHTML = items.map(it => {
+        const other = it.promptId !== curId;
+        const p = promptById(it.promptId);
+        const tag = other ? (p ? 'Question ' + promptNo(it.promptId) : 'Another question') : 'This question';
+        return '<div class="item' + (other ? ' other' : '') + '">' +
+                 '<span class="tag">' + tag + '</span>' +
+                 '<p>' + esc(it.text) + '</p>' +
+                 '<div class="row">' +
+                   '<button class="show" data-show="' + it.key + '">Show it</button>' +
+                   '<button class="hide" data-hide="' + it.key + '">Hide</button>' +
+                 '</div></div>';
+      }).join('');
+    }
+
+    const up = curId ? (S.wall[curId] || []) : [];
+    $('shownwrap').hidden = !up.length;
+    if(up.length){
+      $('shown').innerHTML = up.map((it, i) =>
+        '<div class="up"><p>' + esc(it.text) + '</p>' +
+        '<button data-down="' + it.id + '">Take down</button></div>').join('');
+    }
+  }
+
+  function render(){ renderNow(); renderQueue(); setLive(); }
+
+  /* ---------- actions ---------- */
+  async function saveWall(){ await sSet(K_WALL, { epoch: S.epoch, wall: S.wall }); }
+
+  async function publishState(slide){
+    S.seq += 1;
+    await sSet(K_STATE, { slide: slide, epoch: S.epoch, seq: S.seq, src: 'mod',
+                          moderated: true, allowMultiple: true,
+                          deckRev: (S.state && S.state.deckRev) || 0 });
+  }
+
+  async function move(delta){
+    if(!S.deck.length) return;
+    const n = Math.min(S.deck.length - 1, Math.max(0, S.slide + delta));
+    if(n === S.slide) return;
+    S.slide = n;
+    render();
+    await publishState(n);
+  }
+
+  function stage(key, it){
+    const list = S.wall[it.promptId] || (S.wall[it.promptId] = []);
+    list.push({ id:key, text:it.text, ts:it.ts });
+    S.pending.delete(key);
+    S.fetched.add(key);
+  }
+
+  async function promote(key){
+    const it = S.pending.get(key); if(!it) return;
+    stage(key, it); render();
+    await saveWall(); await sDel(key);
+  }
+
+  async function promoteAll(){
+    const keys = Array.from(S.pending.keys()); if(!keys.length) return;
+    keys.forEach(k => stage(k, S.pending.get(k)));
+    render();
+    await saveWall();
+    for(const k of keys) await sDel(k);
+    toast(keys.length + (keys.length === 1 ? ' response shown' : ' responses shown'));
+  }
+
+  async function dismiss(key){
+    S.pending.delete(key); S.fetched.add(key);
+    render(); await sDel(key);
+  }
+
+  async function takeDown(id){
+    const q = currentQ(); if(!q) return;
+    S.wall[q.id] = (S.wall[q.id] || []).filter(x => x.id !== id);
+    render(); await saveWall();
+    toast('Taken off the wall');
+  }
+
+  /* ---------- sheets ---------- */
+  function sheet(html){
+    const el = document.createElement('div');
+    el.className = 'sheet';
+    el.innerHTML = '<div class="card">' + html + '</div>';
+    el.addEventListener('click', e => { if(e.target === el) el.remove(); });
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function confirmReset(){
+    const el = sheet(
+      '<h2>Start a fresh group?</h2>' +
+      '<p>This clears the wall and the queue for the next setting. Export first if you have not, ' +
+      'because the responses are not kept anywhere else.</p>' +
+      '<div class="acts"><button id="rno">Keep it</button>' +
+      '<button class="danger" id="ryes">Clear it</button></div>');
+    $('rno').onclick  = () => el.remove();
+    $('ryes').onclick = async () => {
+      el.remove();
+      S.busy = true;
+      const keys = await sList(P_PEND);
+      for(const k of keys) await sDel(k);
+      S.pending.clear(); S.fetched.clear(); S.wall = {};
+      S.epoch += 1;
+      await saveWall(); await publishState(S.slide);
+      S.busy = false; render();
+      toast('Cleared — ready for the next setting');
+    };
+  }
+
+  function buildMarkdown(){
+    const now = new Date();
+    let md = '# ShREC response wall\n\n' +
+             now.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' }) + ', ' +
+             now.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }) + '\n';
+    prompts().forEach((p, i) => {
+      const items = S.wall[p.id] || [];
+      md += '\n## ' + (i + 1) + '. ' + p.question + '\n\n';
+      md += items.length
+        ? items.map(it => '- ' + it.text).join('\n') + '\n'
+        : '_No responses shown._\n';
+    });
+    return md;
+  }
+
+  function openExport(){
+    const md = buildMarkdown();
+    const el = sheet(
+      '<h2>Export</h2>' +
+      '<p>The wording is identical in every setting, so these exports aggregate across the rollout.</p>' +
+      '<textarea id="md" readonly></textarea>' +
+      '<div class="acts"><button id="xclose">Close</button>' +
+      '<button class="primary" id="xcopy">Copy</button></div>');
+    $('md').value = md;
+    $('xclose').onclick = () => el.remove();
+    $('xcopy').onclick = async () => {
+      try{ await navigator.clipboard.writeText(md); toast('Copied'); }
+      catch(e){ const t = $('md'); t.select(); t.setSelectionRange(0, md.length); toast('Select and copy'); }
+    };
+  }
+
+  /* ---------- polling ---------- */
+  let ticking = false;
+  async function tick(){
+    if(ticking || S.busy) return;
+    ticking = true;
+    try{
+      const st = await sGet(K_STATE);
+      if(st){
+        S.state = st;
+        if(typeof st.epoch === 'number' && st.epoch !== S.epoch){
+          S.epoch = st.epoch;
+          S.wall = {}; S.pending.clear(); S.fetched.clear();
+        }
+        if(typeof st.seq === 'number' && st.seq > S.seq) S.seq = st.seq;
+        if(st.src === 'deck' && typeof st.slide === 'number') S.slide = st.slide;
+      }
+
+      const d = await sGet(K_DECK);
+      if(d && Array.isArray(d.deck) && d.deck.length) S.deck = d.deck;
+
+      const w = await sGet(K_WALL);
+      if(w && w.wall && w.epoch === S.epoch) S.wall = w.wall;
+
+      const keys = await sList(P_PEND);
+      const live = new Set(keys);
+      for(const k of Array.from(S.pending.keys())) if(!live.has(k)) S.pending.delete(k);
+      for(const k of keys){
+        if(S.pending.has(k) || S.fetched.has(k)) continue;
+        const v = await sGet(k);
+        if(v && v.text && (typeof v.epoch !== 'number' || v.epoch === S.epoch)) S.pending.set(k, v);
+        else S.fetched.add(k);
+      }
+      render();
+    } finally { ticking = false; }
+  }
+
+  /* ---------- wiring ---------- */
+  document.addEventListener('click', e => {
+    const t = e.target;
+    if(t.dataset && t.dataset.show) promote(t.dataset.show);
+    else if(t.dataset && t.dataset.hide) dismiss(t.dataset.hide);
+    else if(t.dataset && t.dataset.down) takeDown(t.dataset.down);
+  });
+
+  function start(){
+    $('gate').remove();
+    ['hdr','main','ftr'].forEach(id => { $(id).hidden = false; });
+    $('prev').onclick    = () => move(-1);
+    $('next').onclick    = () => move(1);
+    $('showall').onclick = promoteAll;
+    $('export').onclick  = openExport;
+    $('reset').onclick   = confirmReset;
+    render();
+    tick();
+    setInterval(tick, 2000);
+  }
+
+  const attempt = () => {
+    const v = $('code').value.trim().toLowerCase();
+    if(!CODE || v === CODE){ sessionStorage.setItem('rw:mod', '1'); start(); }
+    else { $('code').value = ''; $('code').placeholder = 'Not that one'; }
+  };
+  $('go').onclick = attempt;
+  $('code').onkeydown = e => { if(e.key === 'Enter') attempt(); };
+  if(sessionStorage.getItem('rw:mod') === '1') start(); else $('code').focus();
+})();
+</script>
+</body>
+</html>

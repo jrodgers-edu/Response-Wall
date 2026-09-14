@@ -1,0 +1,61 @@
+<style id="wall">
+/* =====================================================================
+   LIVE RESPONSE WALL — the question slides.
+   Reads approved responses from the shared session and paints them in
+   brand style. Never renders the moderation queue: the projector only
+   ever sees what has been shown from the phone.
+   ===================================================================== */
+.slide.wallslide{padding:4.5vh 6vw 6.5vh;justify-content:flex-start}
+.wallslide h2{font-size:clamp(20px,2.5vw,35px);margin-bottom:2px;max-width:44ch}
+.wallhint{font-size:clamp(12px,1.05vw,15px);color:#9aa6ab;font-style:italic;margin:5px 0 12px}
+.walldeck{display:grid;grid-template-columns:1fr clamp(150px,14vw,208px);gap:28px;
+  flex:1;min-height:0;margin-top:4px}
+.wallgrid{display:grid;gap:13px;align-content:start;overflow:hidden;min-height:0;
+  grid-template-columns:repeat(var(--cols,2),minmax(0,1fr))}
+/* a full wall trades white space for every response staying on screen.
+   Type steps down in tiers so a long answer is still read whole, and the
+   line clamp is only a last resort: it ends in an ellipsis rather than
+   cutting a practitioner off mid-word. */
+.wallgrid[data-dense]{gap:9px}
+.wallgrid[data-dense] .wc{padding:10px 28px 10px 13px;border-radius:12px}
+.wallgrid[data-dense] .wc p{font-size:clamp(11.5px,1vw,14.5px);line-height:1.38}
+.wallgrid[data-denser]{gap:7px}
+.wallgrid[data-denser] .wc{padding:8px 26px 8px 12px}
+.wallgrid[data-denser] .wc p{font-size:clamp(10.5px,.88vw,13px);line-height:1.34}
+.wc p{display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;
+  -webkit-line-clamp:var(--lines,8)}
+.wallgrid[data-dense] .wc p{--lines:7}
+.wallgrid[data-denser] .wc p{--lines:6}
+.wc{background:#fff;border:1px solid #eee;border-radius:14px;padding:13px 34px 13px 16px;
+  box-shadow:0 8px 22px rgba(0,0,0,.06);position:relative;overflow:hidden;
+  border-left:5px solid var(--c,#E94E1D);opacity:0;transform:translateY(14px) scale(.97);
+  animation:wcin .45s cubic-bezier(.2,1.3,.4,1) forwards}
+@keyframes wcin{to{opacity:1;transform:none}}
+.wc p{color:var(--ink);line-height:1.42;overflow-wrap:break-word;font-weight:500}
+.wc .n{font-family:'Roboto Slab';font-weight:800;font-size:11px;color:var(--pale);
+  position:absolute;top:11px;right:13px;letter-spacing:.06em}
+.wc.size-l p{font-size:clamp(15px,1.5vw,22px)}
+.wc.size-m p{font-size:clamp(13.5px,1.22vw,18px)}
+.wc.size-s p{font-size:clamp(12px,1.02vw,15px)}
+.wallmore{grid-column:1/-1;text-align:center;font-size:13px;color:#9aa6ab;font-style:italic;padding-top:4px}
+.wallempty{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;height:100%;min-height:30vh;color:#b9c2c6;text-align:center}
+.wallempty strong{font-family:'Roboto Slab';font-weight:700;font-size:clamp(16px,1.7vw,23px);color:#aeb9bd}
+.wallempty span{font-size:clamp(12px,1.05vw,15px);font-style:italic}
+.wallside{display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:flex-start}
+.wallqr{background:#fff;border:1px solid #eee;border-radius:16px;padding:12px;text-align:center;
+  box-shadow:0 8px 22px rgba(0,0,0,.06);width:100%}
+.wallqr img{width:100%;height:auto;border-radius:8px;display:block}
+.wallqr .qr-hint{justify-content:center;margin-top:9px;font-size:11px}
+.wallqr .url{font-size:9.5px;color:#9aa6ab;word-break:break-all;margin-top:5px;line-height:1.3}
+.walltally{text-align:center}
+.walltally .n{font-family:'Roboto Slab';font-weight:800;color:var(--orange);
+  font-size:clamp(28px,3.2vw,44px);line-height:1}
+.walltally span{display:block;font-size:10px;font-weight:700;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--grey);margin-top:4px}
+.wallstale{position:fixed;top:26px;left:34px;z-index:36;font-size:10.5px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;color:#fff;background:var(--red);
+  padding:6px 13px;border-radius:20px;display:none;box-shadow:0 6px 16px rgba(189,24,35,.3)}
+.wallstale.show{display:block}
+@media (max-width:880px){.walldeck{grid-template-columns:1fr}.wallside{flex-direction:row}}
+</style>
