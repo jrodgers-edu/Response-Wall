@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#161616">
+<title>Remote · Response Wall Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@700;800&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style id="ui"></style>
+<style>
+/* =====================================================================
+   PHONE REMOTE + MODERATOR. Dark, for the hand at the back of a room.
+   Nothing on this page is ever projected.
+   ===================================================================== */
+:root{--bg:#161616;--panel:#232323;--line:#343434;--text:#f2f0ec;--dim:#9b9b9b}
+body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;min-height:100vh;overscroll-behavior:none}
+.btn{background:var(--panel);border-color:var(--line);color:var(--text)}
+.btn:hover{color:var(--text);border-color:#555}
+.btn.primary{background:var(--orange);border-color:var(--orange);color:#fff}
+.btn.show{border-color:#2e7d4f;color:#7ee2a3}
+.btn.show:hover{background:#2e7d4f;color:#fff}
+.btn.drop:hover{border-color:var(--red);color:#ff8a8a}
+input[type=text],select{background:var(--panel);border-color:var(--line);color:var(--text)}
+.gate{background:var(--bg)}
+.gate-card{background:var(--panel);border-color:var(--line);color:var(--text)}
+.gate h1{color:var(--text)}
+header{position:sticky;top:0;z-index:10;background:rgba(22,22,22,.97);border-bottom:1px solid var(--line);padding:max(10px,env(safe-area-inset-top)) 14px 10px;backdrop-filter:blur(8px)}
+header>*,main>*,footer>*{max-width:620px;margin-left:auto;margin-right:auto}
+.top{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.top .name{flex:1;min-width:0;font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.live{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim)}
+.live i{width:8px;height:8px;border-radius:50%;background:#4ac26b;display:block}
+.live.stale i{background:var(--red)}
+.nav{display:flex;align-items:center;gap:9px}
+.nav button{flex:0 0 54px;height:54px;border-radius:14px;border:1px solid var(--line);background:var(--panel);color:var(--text);font-size:24px;cursor:pointer}
+.nav button:active{background:#2e2e2e}
+.now{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px 12px;text-align:left;height:54px;display:flex;flex-direction:column;justify-content:center}
+.now .lab{font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--orange)}
+.now.content .lab{color:var(--dim)}
+.now .q{font-size:13.5px;line-height:1.25;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+main{flex:1;overflow-y:auto;padding:12px 14px 20px;-webkit-overflow-scrolling:touch}
+.sec{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:14px 2px 10px;display:flex;align-items:baseline;gap:8px}
+.sec b{font-size:22px;color:var(--orange);font-family:'Roboto Slab'}
+.sec .sp{flex:1}
+.item{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:13px 15px 12px;margin-bottom:10px;border-left:4px solid var(--orange);animation:in .3s ease both}
+@keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.item.other{border-left-color:var(--dim);opacity:.8}
+.item.shown{border-left-color:#4ac26b}
+.item .tag{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);display:flex;justify-content:space-between;margin-bottom:5px}
+.item p{font-size:16px;line-height:1.35;overflow-wrap:break-word;margin-bottom:10px}
+.item .acts{display:flex;gap:8px}
+.item .acts .btn{flex:1;padding:9px}
+.empty{padding:24px 12px;text-align:center;color:var(--dim);font-size:14px;line-height:1.5}
+.notes{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px;color:#ddd;font-size:15px;line-height:1.55}
+.notes p{margin-bottom:9px}.notes p:last-child{margin-bottom:0}
+.rbar{margin-bottom:11px}
+.rbar .l{display:flex;justify-content:space-between;font-size:15px;margin-bottom:5px}
+.rbar .l b{color:var(--c)}
+.rbar .t{height:12px;background:#2a2a2a;border-radius:7px;overflow:hidden}
+.rbar .f{height:100%;background:var(--c);border-radius:7px;transition:width .5s}
+.rscale{display:flex;align-items:flex-end;gap:8px;height:120px;border-bottom:2px solid var(--line);margin-top:10px}
+.rscale div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px;font-size:12px;color:var(--dim)}
+.rscale div i{display:block;width:100%;background:var(--c);border-radius:6px 6px 0 0;transition:height .5s}
+.rscale div b{color:var(--c);font-size:13px}
+.cloud{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline}
+.cloud span{font-family:'Roboto Slab';font-weight:800;color:var(--c);font-size:calc(14px * var(--s,1))}
+.cloud span small{font-family:'Roboto';font-size:11px;color:var(--dim);margin-left:3px}
+footer{position:sticky;bottom:0;background:rgba(22,22,22,.97);border-top:1px solid var(--line);padding:10px 14px max(10px,env(safe-area-inset-bottom));display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+footer .btn{padding:9px 12px;font-size:13px}
+.home{padding:20px 14px 40px}
+.home>*{max-width:620px;margin-left:auto;margin-right:auto}
+.home h1{font-family:'Roboto Slab';font-weight:800;font-size:24px;margin:16px 0 6px}
+.home p{color:var(--dim);line-height:1.5;margin-bottom:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+.card h3{font-family:'Roboto Slab';font-weight:700;font-size:16px;margin-bottom:4px}
+.card .meta{font-size:12.5px;color:var(--dim);margin-bottom:12px}
+.card .acts{display:flex;gap:8px;flex-wrap:wrap}
+.deckrow{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;margin-bottom:8px;background:var(--panel);cursor:pointer}
+.deckrow:active{background:#2b2b2b}
+.deckrow .t{flex:1;min-width:0}
+.deckrow .t b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.deckrow .t span{font-size:12px;color:var(--dim)}
+.modal{background:#1d1d1d;color:var(--text)}
+.modal .muted{color:var(--dim)}
+label.f{color:var(--dim)}
+.signout{font-size:12px;color:var(--dim);text-align:center;margin-top:24px}
+.signout button{background:none;border:none;color:var(--dim);text-decoration:underline;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="shared.js"></script>
+<script>
+(function(){
+  "use strict";
+  document.getElementById('ui').textContent = RW.UI_CSS;
+  const root = document.getElementById('root');
+  const esc = RW.esc;
+
+  const S = { live: null, deck: null, deckId: null, visible: [], seq: 0, pending: {}, shown: {}, votes: {}, unsubs: [], view: null, decks: {} };
+
+  RW.requireUser(root, user => {
+    RW.watch(RW.P.decks, v => { S.decks = v || {}; if(S.view === 'home') home(); });
+    RW.watch(RW.P.live, (live, err) => {
+      if(err){ setLive(false); return; }
+      setLive(true);
+      const before = S.live;
+      S.live = live;
+      if(!live || !live.sessionId){ detach(); home(); return; }
+      if(typeof live.seq === 'number' && live.seq > S.seq) S.seq = live.seq;
+      if(!before || before.sessionId !== live.sessionId || live.deckId !== S.deckId){ attach(live); return; }
+      if(S.view === 'session') paintNav();
+    });
+  });
+
+  function setLive(ok){ const l = document.getElementById('live'); if(l) l.classList.toggle('stale', !ok); }
+
+  /* ================================================================
+     HOME — resume or start
+     ================================================================ */
+  function home(){
+    S.view = 'home';
+    const decks = Object.entries(S.decks).sort((a, b) => (b[1].updatedAt || 0) - (a[1].updatedAt || 0));
+    root.innerHTML = '<div class="home">' +
+      '<div class="mark">Response Wall Studio · Remote</div>' +
+      '<h1>Start a session</h1><p>Pick the deck the laptop is showing. The phone then drives the slides and holds the moderation queue.</p>' +
+      (decks.length ? decks.map(([id, d]) => '<div class="deckrow" data-id="' + esc(id) + '"><div class="t"><b>' + esc(d.title) + '</b><span>' + (d.slides || 0) + ' slides · ' + (d.questions || 0) + ' questions</span></div><span class="btn sm">Start</span></div>').join('')
+                   : '<div class="empty">No decks yet. Build one in the studio on the laptop first.</div>') +
+      '<div class="signout"><button id="signout">Sign out</button></div></div>';
+    root.querySelectorAll('.deckrow').forEach(r => r.addEventListener('click', () => startFlow(r.dataset.id)));
+    document.getElementById('signout').onclick = () => RW.signOut();
+  }
+
+  function startFlow(deckId){
+    const d = S.decks[deckId];
+    const m = RW.modal('<h2>Name this session</h2><p class="muted">The setting, the group, the date. It labels the export so visits aggregate.</p>' +
+      '<label class="f">Session name</label><input type="text" id="sname" value="' + esc(d.title + ' · ' + RW.dateStamp(Date.now())) + '">' +
+      '<div class="row"><button class="btn" data-close>Cancel</button><button class="btn primary" id="go">Start session</button></div>');
+    m.querySelector('#sname').focus();
+    m.querySelector('#go').onclick = async () => {
+      const name = m.querySelector('#sname').value.trim() || d.title;
+      RW.closeModal();
+      await startSession(deckId, name);
+    };
+  }
+
+  async function startSession(deckId, name){
+    const deck = await RW.get(RW.P.deckdocs + '/' + deckId);
+    if(!deck){ RW.toast('Deck not found'); return; }
+    const sid = 's' + RW.uid().replace(/[^A-Za-z0-9_-]/g, '');
+    const questions = {};
+    (deck.slides || []).filter(s => !s.hidden && s.kind === 'q' && s.type !== 'join').forEach(s => { questions[s.id] = { type: s.type, question: s.question || '', options: s.options || null }; });
+    await RW.set(RW.P.sessions + '/' + sid + '/meta', { name, deckId, deckTitle: deck.title, startedAt: Date.now(), questions });
+    S.seq = 0;
+    const visible = (deck.slides || []).filter(s => !s.hidden);
+    await RW.set(RW.P.live, { sessionId: sid, deckId, slide: 0, seq: 1, src: 'remote', question: RW.liveQuestion(visible[0]), at: Date.now() });
+    RW.toast('Session started');
+  }
+
+  /* ================================================================
+     SESSION — attach listeners, then render
+     ================================================================ */
+  function detach(){ S.unsubs.forEach(u => u()); S.unsubs = []; S.deck = null; S.deckId = null; S.pending = {}; S.shown = {}; S.votes = {}; }
+
+  async function attach(live){
+    detach();
+    S.deckId = live.deckId;
+    S.deck = await RW.get(RW.P.deckdocs + '/' + live.deckId);
+    if(!S.deck){ root.innerHTML = '<div class="empty">The live deck could not be loaded.</div>'; return; }
+    S.visible = (S.deck.slides || []).filter(s => !s.hidden);
+    S.meta = await RW.get(RW.P.sessions + '/' + live.sessionId + '/meta') || {};
+    const sid = live.sessionId;
+    S.unsubs.push(RW.watch(RW.P.pending + '/' + sid, v => { S.pending = v || {}; if(S.view === 'session') paintBody(); }));
+    S.unsubs.push(RW.watch(RW.P.sessions + '/' + sid + '/shown', v => { S.shown = v || {}; if(S.view === 'session') paintBody(); }));
+    S.unsubs.push(RW.watch(RW.P.sessions + '/' + sid + '/votes', v => { S.votes = v || {}; if(S.view === 'session') paintBody(); }));
+    session();
+  }
+
+  function session(){
+    S.view = 'session';
+    root.innerHTML =
+      '<header><div class="top"><span class="mark">Remote</span><span class="name" id="sname"></span><span class="live" id="live"><i></i>Live</span></div>' +
+      '<div class="nav"><button id="prev" aria-label="Previous">‹</button><div class="now" id="now"></div><button id="next" aria-label="Next">›</button></div></header>' +
+      '<main id="main"></main>' +
+      '<footer><button class="btn" id="notesbtn">Notes</button><button class="btn" id="export">Export</button><button class="btn" id="newgroup">New group</button><button class="btn drop" id="end">End session</button></footer>';
+    document.getElementById('sname').textContent = S.meta.name || '';
+    document.getElementById('prev').onclick = () => nav(-1);
+    document.getElementById('next').onclick = () => nav(1);
+    document.getElementById('now').onclick = jumpTo;
+    document.getElementById('notesbtn').onclick = () => { S.showNotes = !S.showNotes; paintBody(); };
+    document.getElementById('export').onclick = exportFlow;
+    document.getElementById('newgroup').onclick = newGroup;
+    document.getElementById('end').onclick = endSession;
+    paintNav(); paintBody();
+  }
+
+  const cur = () => S.visible[Math.max(0, Math.min(S.visible.length - 1, (S.live && S.live.slide) || 0))];
+  const curIndex = () => Math.max(0, Math.min(S.visible.length - 1, (S.live && S.live.slide) || 0));
+
+  function paintNav(){
+    const now = document.getElementById('now'); if(!now) return;
+    const s = cur(), i = curIndex();
+    const isQ = s && s.kind === 'q' && s.type !== 'join';
+    now.className = 'now' + (isQ ? '' : ' content');
+    now.innerHTML = '<div class="lab">' + (i + 1) + ' / ' + S.visible.length + (isQ ? ' · ' + RW.Q_TYPES[s.type].label : s && s.type === 'join' ? ' · Join' : '') + '</div><div class="q">' + esc(RW.slideTitle(s)) + '</div>';
+    if(S.lastSlide !== i){ S.lastSlide = i; paintBody(); }
+  }
+
+  async function nav(d){
+    const n = Math.max(0, Math.min(S.visible.length - 1, curIndex() + d));
+    if(n === curIndex()) return;
+    await goTo(n);
+  }
+  async function goTo(n){
+    S.seq += 1;
+    await RW.set(RW.P.live, { sessionId: S.live.sessionId, deckId: S.deckId, slide: n, seq: S.seq, src: 'remote', question: RW.liveQuestion(S.visible[n]), at: Date.now() });
+  }
+  function jumpTo(){
+    const m = RW.modal('<h2>Jump to a slide</h2><div style="max-height:60vh;overflow:auto;margin-top:10px">' +
+      S.visible.map((s, i) => '<div class="deckrow" data-i="' + i + '"><div class="t"><b>' + (i + 1) + '. ' + esc(RW.slideTitle(s)) + '</b><span>' + (s.kind === 'q' ? RW.Q_TYPES[s.type].label : 'Slide') + '</span></div></div>').join('') +
+      '</div><div class="row"><button class="btn" data-close>Close</button></div>');
+    m.querySelectorAll('.deckrow').forEach(r => r.onclick = () => { RW.closeModal(); goTo(+r.dataset.i); });
+  }
+
+  /* ---------- body per slide type ---------- */
+  function paintBody(){
+    const main = document.getElementById('main'); if(!main) return;
+    const s = cur(); if(!s) return;
+    let html = '';
+    if(S.showNotes || s.kind === 'html' || (s.kind === 'q' && s.type === 'join')){
+      const notes = (S.deck.notes || {})[s.key] || [];
+      html += '<div class="sec">Presenter notes</div><div class="notes">' + (notes.length ? notes.map(p => '<p>' + p + '</p>').join('') : '<p style="color:var(--dim)">No notes for this slide.</p>') + '</div>';
+      if(s.kind === 'q' && s.type === 'join') html += '<div class="sec">Join</div><div class="notes">Participants scan the QR on the screen, or go to <b>' + esc(RW.JOIN_SHORT) + '</b>.</div>';
+      if(s.kind === 'html'){ main.innerHTML = html + pendingElsewhere(); return; }
+    }
+    if(s.kind === 'q' && (s.type === 'text' || s.type === 'words')) html += moderation(s);
+    if(s.kind === 'q' && s.type === 'choice') html += choiceResults(s);
+    if(s.kind === 'q' && s.type === 'scale') html += scaleResults(s);
+    main.innerHTML = html;
+    wireModeration();
+  }
+
+  const pendingList = () => Object.entries(S.pending).map(([k, v]) => Object.assign({ key: k }, v)).sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  const qById = id => S.visible.find(x => x.kind === 'q' && x.id === id);
+
+  function pendingElsewhere(){
+    const items = pendingList();
+    if(!items.length) return '';
+    return '<div class="sec"><b>' + items.length + '</b> waiting on other questions</div>' + items.slice(0, 5).map(it => pendingCard(it, true)).join('') + (items.length > 5 ? '<div class="empty">and ' + (items.length - 5) + ' more</div>' : '');
+  }
+
+  function pendingCard(it, other){
+    const q = qById(it.q);
+    return '<div class="item' + (other ? ' other' : '') + '" data-key="' + esc(it.key) + '"><div class="tag"><span>' + esc(other && q ? q.question.slice(0, 40) : 'Waiting') + '</span><span>' + RW.clock(it.ts || Date.now()) + '</span></div><p>' + esc(it.t) + '</p>' +
+      '<div class="acts"><button class="btn show" data-act="show" data-key="' + esc(it.key) + '" data-q="' + esc(it.q) + '">Show it</button><button class="btn drop" data-act="hide" data-key="' + esc(it.key) + '">Hide</button></div></div>';
+  }
+
+  function moderation(s){
+    const all = pendingList();
+    const mine = all.filter(it => it.q === s.id), other = all.filter(it => it.q !== s.id);
+    const shown = RW.sortedShown(S.shown[s.id]);
+    let html = '<div class="sec"><b>' + mine.length + '</b> waiting<span class="sp"></span>' + (mine.length > 1 ? '<button class="btn sm show" id="showall">Show all</button>' : '') + '</div>';
+    html += mine.length ? mine.map(it => pendingCard(it, false)).join('') : '<div class="empty">Nothing waiting. New answers land here first and never reach the screen until you show them.</div>';
+    if(s.type === 'words' && shown.length){
+      const words = RW.wordCounts(S.shown[s.id]); const max = words[0][1];
+      html += '<div class="sec"><b>' + shown.length + '</b> in the cloud</div><div class="notes"><div class="cloud">' + words.map((w, i) => '<span style="--s:' + (1 + (max > 1 ? (w[1] - 1) / (max - 1) : 0)).toFixed(2) + ';--c:' + RW.BRAND[i % 5] + '">' + esc(w[0]) + (w[1] > 1 ? '<small>' + w[1] + '</small>' : '') + '</span>').join('') + '</div></div>';
+    }
+    html += '<div class="sec"><b>' + shown.length + '</b> on the wall</div>';
+    html += shown.length ? shown.map((it, i) => '<div class="item shown"><div class="tag"><span>' + String(i + 1).padStart(2, '0') + '</span><span>' + RW.clock(it.ts) + '</span></div><p>' + esc(it.t) + '</p><div class="acts"><button class="btn drop" data-act="down" data-id="' + esc(it.id) + '" data-q="' + esc(s.id) + '">Take down</button></div></div>').join('') : '<div class="empty">Nothing shown yet.</div>';
+    if(other.length) html += '<div class="sec"><b>' + other.length + '</b> waiting on other questions</div>' + other.map(it => pendingCard(it, true)).join('');
+    return html;
+  }
+
+  function wireModeration(){
+    document.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', async () => {
+      const act = b.dataset.act, sid = S.live.sessionId;
+      b.disabled = true;
+      try{
+        if(act === 'show'){
+          const it = S.pending[b.dataset.key]; if(!it) return;
+          const up = {};
+          up[RW.P.sessions + '/' + sid + '/shown/' + it.q + '/' + b.dataset.key] = { t: it.t, ts: Date.now() };
+          up[RW.P.pending + '/' + sid + '/' + b.dataset.key] = null;
+          await RW.update('/', up);
+        }
+        if(act === 'hide') await RW.remove(RW.P.pending + '/' + sid + '/' + b.dataset.key);
+        if(act === 'down') await RW.remove(RW.P.sessions + '/' + sid + '/shown/' + b.dataset.q + '/' + b.dataset.id);
+      }catch(e){ RW.toast('That did not save'); b.disabled = false; }
+    }));
+    const all = document.getElementById('showall');
+    if(all) all.onclick = async () => {
+      const s = cur(), sid = S.live.sessionId, up = {};
+      pendingList().filter(it => it.q === s.id).forEach(it => {
+        up[RW.P.sessions + '/' + sid + '/shown/' + it.q + '/' + it.key] = { t: it.t, ts: Date.now() };
+        up[RW.P.pending + '/' + sid + '/' + it.key] = null;
+      });
+      await RW.update('/', up);
+    };
+  }
+
+  function choiceResults(s){
+    const opts = (s.options || []).filter(o => o && o.trim());
+    const { counts, total } = RW.choiceCounts(S.votes[s.id], opts.length);
+    const max = Math.max(1, ...counts);
+    return '<div class="sec"><b>' + total + '</b> answered</div><div class="notes">' + opts.map((o, i) =>
+      '<div class="rbar" style="--c:' + RW.BRAND[i % 5] + '"><div class="l"><span>' + esc(o) + '</span><b>' + counts[i] + (total ? ' · ' + Math.round(counts[i] / total * 100) + '%' : '') + '</b></div><div class="t"><div class="f" style="width:' + (counts[i] / max * 100) + '%"></div></div></div>').join('') + '</div>' + pendingElsewhere();
+  }
+
+  function scaleResults(s){
+    const min = +s.min || 1, max = +s.max || 5;
+    const { counts, total, mean } = RW.scaleStats(S.votes[s.id], min, max);
+    const peak = Math.max(1, ...Object.values(counts));
+    let cols = '';
+    for(let v = min; v <= max; v++) cols += '<div style="--c:' + RW.BRAND[(v - min) % 5] + '"><b>' + counts[v] + '</b><i style="height:' + (counts[v] / peak * 100) + '%"></i><span>' + v + '</span></div>';
+    return '<div class="sec"><b>' + total + '</b> answered' + (mean != null ? '<span class="sp"></span><span>average ' + mean.toFixed(2) + '</span>' : '') + '</div><div class="notes"><div class="rscale">' + cols + '</div></div>' + pendingElsewhere();
+  }
+
+  /* ---------- session lifecycle ---------- */
+  async function endSession(){
+    const m = RW.modal('<h2>End this session?</h2><p class="muted">Responses stay saved and exportable. The screen and every phone go back to waiting.</p><div class="row"><button class="btn" data-close>Keep going</button><button class="btn primary" id="ok">End session</button></div>');
+    m.querySelector('#ok').onclick = async () => { RW.closeModal(); await finish(); RW.toast('Session ended'); };
+  }
+  async function finish(){
+    const sid = S.live.sessionId;
+    const shownCount = Object.values(S.shown).reduce((a, q) => a + Object.keys(q || {}).length, 0);
+    const voteCount = Object.values(S.votes).reduce((a, q) => a + Object.keys(q || {}).length, 0);
+    await RW.update(RW.P.sessions + '/' + sid + '/meta', { endedAt: Date.now(), shownCount, voteCount });
+    await RW.remove(RW.P.pending + '/' + sid);
+    await RW.set(RW.P.live, null);
+  }
+  async function newGroup(){
+    const deckId = S.deckId, name = (S.meta.name || S.deck.title);
+    const m = RW.modal('<h2>New group</h2><p class="muted">Ends this session, keeps its responses, and starts a fresh one on the same deck from the first slide.</p>' +
+      '<label class="f">Session name</label><input type="text" id="sname" value="' + esc(S.deck.title + ' · ' + RW.dateStamp(Date.now())) + '">' +
+      '<div class="row"><button class="btn" data-close>Cancel</button><button class="btn primary" id="ok">Start fresh</button></div>');
+    m.querySelector('#ok').onclick = async () => {
+      const n = m.querySelector('#sname').value.trim() || name;
+      RW.closeModal();
+      await finish();
+      await startSession(deckId, n);
+    };
+  }
+
+  /* ---------- export ---------- */
+  function exportFlow(){
+    const m = RW.modal('<h2>Export</h2><p class="muted">One row per response. Question ids are stable across sessions, so files from different visits stack.</p>' +
+      '<div class="row" style="justify-content:flex-start"><button class="btn primary" id="this">This session (.csv)</button><button class="btn" id="all">Every session on this deck (.csv)</button><button class="btn" id="copy">Copy this session as text</button></div>' +
+      '<div class="row"><button class="btn" data-close>Close</button></div>');
+    const sid = S.live.sessionId;
+    const thisRows = () => RW.sessionRows({ id: sid, meta: S.meta, shown: S.shown, votes: S.votes }, S.deck);
+    const stamp = new Date().toISOString().slice(0, 10);
+    m.querySelector('#this').onclick = () => { RW.download('responses-' + stamp + '.csv', RW.toCsv(thisRows()), 'text/csv') || RW.toast('Download blocked; use Copy'); };
+    m.querySelector('#all').onclick = async () => {
+      const all = await RW.get(RW.P.sessions) || {};
+      let rows = [];
+      Object.entries(all).forEach(([id, s]) => { if(s.meta && s.meta.deckId === S.deckId) rows = rows.concat(RW.sessionRows(Object.assign({ id }, s), S.deck)); });
+      RW.download('responses-all-' + stamp + '.csv', RW.toCsv(rows), 'text/csv') || RW.toast('Download blocked; use Copy');
+    };
+    m.querySelector('#copy').onclick = async () => {
+      let out = '# ' + (S.meta.name || '') + '\n';
+      S.visible.filter(s => s.kind === 'q' && s.type !== 'join').forEach((s, i) => {
+        out += '\n## ' + (i + 1) + '. ' + s.question + '\n';
+        if(s.type === 'text' || s.type === 'words') RW.sortedShown(S.shown[s.id]).forEach((it, j) => out += (j + 1) + '. ' + it.t + '\n');
+        if(s.type === 'choice'){ const { counts, total } = RW.choiceCounts(S.votes[s.id], (s.options || []).length); (s.options || []).forEach((o, k) => out += '- ' + o + ': ' + counts[k] + '\n'); out += '(' + total + ' answered)\n'; }
+        if(s.type === 'scale'){ const st = RW.scaleStats(S.votes[s.id], +s.min || 1, +s.max || 5); Object.keys(st.counts).forEach(v => out += '- ' + v + ': ' + st.counts[v] + '\n'); out += '(' + st.total + ' answered' + (st.mean != null ? ', average ' + st.mean.toFixed(2) : '') + ')\n'; }
+      });
+      try{ await navigator.clipboard.writeText(out); RW.toast('Copied'); }catch(e){ RW.toast('Copy blocked on this phone'); }
+    };
+  }
+})();
+</script>
+</body>
+</html>

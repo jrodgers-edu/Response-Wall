@@ -1,0 +1,67 @@
+{
+  "rules": {
+    "response-wall": {
+      ".read": true,
+      ".write": false,
+      "session:join":  { ".write": true, ".validate": "newData.isString() && newData.val().length < 2000" },
+      "session:state": { ".write": true, ".validate": "newData.isString() && newData.val().length < 2000" },
+      "session:wall":  { ".write": true, ".validate": "newData.isString() && newData.val().length < 200000" },
+      "session:deck":  { ".write": true, ".validate": "newData.isString() && newData.val().length < 200000" },
+      "$pending": {
+        ".write": "$pending.beginsWith('pending:') && (!data.exists() || !newData.exists())",
+        ".validate": "newData.isString() && newData.val().length < 1000"
+      }
+    },
+
+    "studio": {
+      "decks": {
+        ".read":  "auth != null && auth.token.email.matches(/^(jrodgers@mountsbayacademy\\.org|johnrodgers@mountsbay\\.tpacademytrust\\.org|john\\.rodgers\\.cornwall@researchschool\\.org\\.uk|info\\.cornwall@researchschool\\.org\\.uk)$/)",
+        ".write": "auth != null && auth.token.email.matches(/^(jrodgers@mountsbayacademy\\.org|johnrodgers@mountsbay\\.tpacademytrust\\.org|john\\.rodgers\\.cornwall@researchschool\\.org\\.uk|info\\.cornwall@researchschool\\.org\\.uk)$/)"
+      },
+      "deckdocs": {
+        ".read":  "auth != null && auth.token.email.matches(/^(jrodgers@mountsbayacademy\\.org|johnrodgers@mountsbay\\.tpacademytrust\\.org|john\\.rodgers\\.cornwall@researchschool\\.org\\.uk|info\\.cornwall@researchschool\\.org\\.uk)$/)",
+        ".write": "auth != null && auth.token.email.matches(/^(jrodgers@mountsbayacademy\\.org|johnrodgers@mountsbay\\.tpacademytrust\\.org|john\\.rodgers\\.cornwall@researchschool\\.org\\.uk|info\\.cornwall@researchschool\\.org\\.uk)$/)"
+      },
+      "live": {
+        ".read": true,
+        ".write": "auth != null && auth.token.email.matches(/^(jrodgers@mountsbayacademy\\.org|johnrodgers@mountsbay\\.tpacademytrust\\.org|john\\.rodgers\\.cornwall@researchschool\\.org\\.uk|info\\.cornwall@researchschool\\.org\\.uk)$/)"
+      },
+      "sessions": {
+        "$sid": {
+          "meta": {
+            ".read":  "auth != null && auth.token.email.matches(/^(jrodgers@mountsbayacademy\\.org|johnrodgers@mountsbay\\.tpacademytrust\\.org|john\\.rodgers\\.cornwall@researchschool\\.org\\.uk|info\\.cornwall@researchschool\\.org\\.uk)$/)",
+            ".write": "auth != null && auth.token.email.matches(/^(jrodgers@mountsbayacademy\\.org|johnrodgers@mountsbay\\.tpacademytrust\\.org|john\\.rodgers\\.cornwall@researchschool\\.org\\.uk|info\\.cornwall@researchschool\\.org\\.uk)$/)"
+          },
+          "shown": {
+            ".read": true,
+            ".write": "auth != null && auth.token.email.matches(/^(jrodgers@mountsbayacademy\\.org|johnrodgers@mountsbay\\.tpacademytrust\\.org|john\\.rodgers\\.cornwall@researchschool\\.org\\.uk|info\\.cornwall@researchschool\\.org\\.uk)$/)"
+          },
+          "votes": {
+            ".read": true,
+            ".write": "auth != null && auth.token.email.matches(/^(jrodgers@mountsbayacademy\\.org|johnrodgers@mountsbay\\.tpacademytrust\\.org|john\\.rodgers\\.cornwall@researchschool\\.org\\.uk|info\\.cornwall@researchschool\\.org\\.uk)$/)",
+            "$qid": {
+              "$cid": {
+                ".write": "$sid == root.child('studio/live/sessionId').val() && $qid == root.child('studio/live/question/id').val() && $cid.matches(/^c[A-Za-z0-9_-]{6,40}$/) && newData.isString() && newData.val().length <= 40"
+              }
+            }
+          },
+          "$other": { ".read": false, ".write": false }
+        }
+      },
+      "pending": {
+        ".read":  "auth != null && auth.token.email.matches(/^(jrodgers@mountsbayacademy\\.org|johnrodgers@mountsbay\\.tpacademytrust\\.org|john\\.rodgers\\.cornwall@researchschool\\.org\\.uk|info\\.cornwall@researchschool\\.org\\.uk)$/)",
+        ".write": "auth != null && auth.token.email.matches(/^(jrodgers@mountsbayacademy\\.org|johnrodgers@mountsbay\\.tpacademytrust\\.org|john\\.rodgers\\.cornwall@researchschool\\.org\\.uk|info\\.cornwall@researchschool\\.org\\.uk)$/)",
+        "$sid": {
+          "$item": {
+            ".write": "(auth != null && auth.token.email.matches(/^(jrodgers@mountsbayacademy\\.org|johnrodgers@mountsbay\\.tpacademytrust\\.org|john\\.rodgers\\.cornwall@researchschool\\.org\\.uk|info\\.cornwall@researchschool\\.org\\.uk)$/)) || (!data.exists() && newData.exists() && $sid == root.child('studio/live/sessionId').val() && newData.child('q').val() == root.child('studio/live/question/id').val())",
+            ".validate": "!newData.exists() || (newData.hasChildren(['q','t','ts']) && newData.child('q').isString() && newData.child('q').val().length <= 64 && newData.child('t').isString() && newData.child('t').val().length >= 1 && newData.child('t').val().length <= 200 && newData.child('ts').isNumber())",
+            "q":  { ".validate": true },
+            "t":  { ".validate": true },
+            "ts": { ".validate": true },
+            "$other": { ".validate": false }
+          }
+        }
+      }
+    }
+  }
+}

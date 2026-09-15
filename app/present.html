@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Present · Response Wall Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;600;700;800&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style id="ui"></style>
+<style id="deckstyles"></style>
+<style id="wall"></style>
+<style>
+/* projector chrome that is ours, not the deck's */
+.rw-chip{position:fixed;top:26px;left:34px;z-index:36;display:flex;align-items:center;gap:8px;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#706F6F;background:rgba(255,255,255,.9);padding:6px 13px;border-radius:20px;box-shadow:0 6px 16px rgba(0,0,0,.08);opacity:0;transition:opacity .4s}
+body:hover .rw-chip,.rw-chip.stay{opacity:1}
+.rw-chip i{width:8px;height:8px;border-radius:50%;background:#4ac26b;display:block}
+.rw-chip.off i{background:#BCD2DC}
+.rw-chip.stale i{background:#BD1823}
+.rw-chip button{border:none;background:transparent;color:#E94E1D;font:inherit;cursor:pointer;letter-spacing:inherit;text-transform:inherit;padding:0}
+#gate{position:fixed;inset:0;z-index:200}
+.loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#706F6F;font-family:'Roboto Slab';font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:12px}
+</style>
+</head>
+<body>
+<div id="gate"></div>
+<div id="stage" class="loading">Loading deck</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="qr.js"></script>
+<script src="shared.js"></script>
+<script>
+(function(){
+  "use strict";
+  document.getElementById('ui').textContent = RW.UI_CSS;
+  document.getElementById('wall').textContent = RW.WALL_CSS;
+
+  const params = new URLSearchParams(location.search);
+  const deckId = params.get('deck');
+  const gate = document.getElementById('gate');
+  const stage = document.getElementById('stage');
+
+  if(!deckId){
+    stage.className = 'loading';
+    stage.textContent = 'No deck given. Open a deck from the studio.';
+    return;
+  }
+
+  RW.requireUser(gate, async user => {
+    gate.remove();
+    const deck = await RW.get(RW.P.deckdocs + '/' + deckId);
+    if(!deck){ stage.textContent = 'That deck was not found.'; return; }
+    build(deck);
+  });
+
+  /* ====================================================================
+     BUILD THE DECK FROM STORAGE
+     ==================================================================== */
+  function build(deck){
+    document.title = deck.title + ' · Present';
+    document.getElementById('deckstyles').textContent = (deck.styles || []).map(s => s.css).join('\n');
+
+    const visible = (deck.slides || []).filter(s => !s.hidden);
+    const slidesHtml = visible.map(s => s.kind === 'q' ? RW.questionSlideHtml(s) : s.html).join('\n');
+
+    stage.className = '';
+    stage.innerHTML =
+      '<div id="bg"></div>' +
+      '<img class="brandlogo" src="logo.png" alt="Cornwall Research School">' +
+      '<div class="progress" id="progress"></div>' +
+      '<div class="deck">' + slidesHtml + '</div>' +
+      '<button class="navbtn" id="prev" aria-label="Previous">‹</button>' +
+      '<button class="navbtn" id="next" aria-label="Next">›</button>' +
+      '<div class="dots" id="dots"></div>' +
+      '<div class="counter"><span class="c" id="cur">1</span> / <span id="tot">1</span></div>' +
+      '<div class="slide-foot">' + RW.esc(deck.footer || '') + '</div>' +
+      '<div class="notehint">← → to navigate · N for presenter notes · F for fullscreen</div>' +
+      '<div id="notes"><h5 id="noteslide">Presenter notes</h5><div id="notesbody"></div></div>' +
+      '<div class="rw-chip off stay" id="chip"><i></i><span id="chiptext">No live session</span><button id="chipbtn" hidden>Start one</button></div>';
+
+    /* ---------- the engine (as the deck template, driven by stored data) ---------- */
+    (function rings(){
+      const bg = document.getElementById('bg');
+      for(let i = 0; i < 7; i++){
+        const r = document.createElement('div'); r.className = 'ring';
+        const s = 120 + Math.random() * 360;
+        r.style.width = r.style.height = s + 'px';
+        r.style.left = (Math.random() * 100) + '%'; r.style.top = (Math.random() * 100) + '%';
+        r.style.borderColor = RW.BRAND[i % RW.BRAND.length];
+        r.style.animationDuration = (26 + Math.random() * 30) + 's';
+        r.style.animationDelay = (-Math.random() * 20) + 's';
+        bg.appendChild(r);
+      }
+    })();
+
+    const MODULES = deck.modules || [];
+    const NOTES = deck.notes || {};
+    (function orbit(){
+      const ring = document.getElementById('spinring');
+      if(!ring || !MODULES.length) return;
+      const R = 42;
+      MODULES.forEach((m, i) => {
+        const a = (i / MODULES.length) * 2 * Math.PI - Math.PI / 2;
+        const n = document.createElement('div');
+        n.className = 'node'; n.style.left = (50 + R * Math.cos(a)) + '%'; n.style.top = (50 + R * Math.sin(a)) + '%'; n.style.background = m[3];
+        n.innerHTML = '<div>' + m[0] + '</div>';
+        n.addEventListener('click', () => selectModule(i, n));
+        ring.appendChild(n);
+      });
+    })();
+    function selectModule(i, node){
+      document.querySelectorAll('.node').forEach(n => n.classList.remove('sel'));
+      if(node) node.classList.add('sel');
+      const m = MODULES[i]; if(!m) return;
+      const num = document.getElementById('mnum'), t = document.getElementById('mtitle'), d = document.getElementById('mdesc');
+      if(num) num.textContent = 'Item ' + m[0];
+      if(!t || !d) return;
+      t.style.opacity = 0; d.style.opacity = 0;
+      setTimeout(() => { t.textContent = m[1]; d.textContent = m[2]; t.style.transition = 'opacity .35s'; d.style.transition = 'opacity .35s'; t.style.opacity = 1; d.style.opacity = 1; }, 160);
+    }
+    function runCounters(slide){
+      slide.querySelectorAll('[data-count]').forEach(el => {
+        if(el.dataset.done) return; el.dataset.done = 1;
+        const end = +el.dataset.count, suf = el.dataset.suffix || ''; let cur = 0;
+        const step = Math.max(1, Math.round(end / 24));
+        const t = setInterval(() => { cur += step; if(cur >= end){ cur = end; clearInterval(t); } el.textContent = cur + suf; }, 36);
+      });
+    }
+
+    const slides = [...document.querySelectorAll('.slide')];
+    const dotsWrap = document.getElementById('dots');
+    let idx = 0;
+    slides.forEach((s, i) => { const b = document.createElement('button'); b.className = 'dot'; b.addEventListener('click', () => go(i)); dotsWrap.appendChild(b); });
+    const dots = [...document.querySelectorAll('.dot')];
+    document.getElementById('tot').textContent = slides.length;
+
+    function go(n, quiet){
+      n = Math.max(0, Math.min(slides.length - 1, n));
+      slides.forEach((s, i) => { s.classList.remove('active', 'past'); if(i < n) s.classList.add('past'); });
+      slides[n].classList.add('active');
+      dots.forEach((d, i) => d.classList.toggle('active', i === n));
+      document.getElementById('cur').textContent = n + 1;
+      document.getElementById('progress').style.width = (slides.length > 1 ? n / (slides.length - 1) * 100 : 100) + '%';
+      runCounters(slides[n]);
+      const key = slides[n].dataset.notes;
+      document.getElementById('noteslide').textContent = 'Presenter notes · slide ' + (n + 1);
+      document.getElementById('notesbody').innerHTML = (NOTES[key] || []).map(p => '<p>' + p + '</p>').join('');
+      if(slides[n].querySelector('#spinring')) setTimeout(() => { if(!document.querySelector('.node.sel')) selectModule(0, document.querySelectorAll('.node')[0]); }, 700);
+      idx = n;
+      repaint(slides[n]);
+      if(!quiet) publish();
+    }
+
+    document.getElementById('next').addEventListener('click', () => go(idx + 1));
+    document.getElementById('prev').addEventListener('click', () => go(idx - 1));
+    document.addEventListener('keydown', e => {
+      if(e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown'){ e.preventDefault(); go(idx + 1); }
+      else if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); go(idx - 1); }
+      else if(e.key === 'Home'){ go(0); } else if(e.key === 'End'){ go(slides.length - 1); }
+      else if(e.key.toLowerCase() === 'n'){ document.getElementById('notes').classList.toggle('show'); }
+      else if(e.key.toLowerCase() === 'f'){ if(!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
+    });
+    let tx = 0;
+    document.addEventListener('touchstart', e => tx = e.changedTouches[0].clientX);
+    document.addEventListener('touchend', e => { const dx = e.changedTouches[0].clientX - tx; if(Math.abs(dx) > 60) go(idx + (dx < 0 ? 1 : -1)); });
+
+    /* ====================================================================
+       THE LIVE SESSION
+       studio/live = { sessionId, deckId, slide, seq, src, question }
+       ==================================================================== */
+    const S = { live: null, seq: 0, sid: null, shown: {}, votes: {}, paintState: {}, unsubs: [] };
+    const chip = document.getElementById('chip'), chipText = document.getElementById('chiptext'), chipBtn = document.getElementById('chipbtn');
+
+    function setChip(mode, text){
+      chip.className = 'rw-chip stay ' + mode;
+      chipText.textContent = text;
+      chipBtn.hidden = mode !== 'off';
+      if(mode === 'on') setTimeout(() => chip.classList.remove('stay'), 4000);
+    }
+
+    async function publish(){
+      if(!S.sid) return;
+      S.seq += 1;
+      const q = RW.liveQuestion(visible[idx]);
+      await RW.set(RW.P.live, { sessionId: S.sid, deckId, slide: idx, seq: S.seq, src: 'deck', question: q, at: Date.now() });
+    }
+
+    function repaint(slideEl){
+      if(!slideEl || !slideEl.dataset.qid) return;
+      const qid = slideEl.dataset.qid;
+      RW.paintQuestion(slideEl, { shown: S.shown[qid], votes: S.votes[qid] }, S.paintState[qid] || (S.paintState[qid] = {}));
+    }
+    function repaintActive(){ repaint(slides[idx]); }
+
+    function attachSession(sid){
+      S.unsubs.forEach(u => u()); S.unsubs = [];
+      S.sid = sid; S.shown = {}; S.votes = {}; S.paintState = {};
+      slides.forEach(s => { if(s.dataset.qid){ const g = s.querySelector('.wallgrid'); if(g) g.innerHTML = ''; } });
+      if(!sid){ repaintActive(); return; }
+      S.unsubs.push(RW.watch(RW.P.sessions + '/' + sid + '/shown', v => { S.shown = v || {}; repaintActive(); }));
+      S.unsubs.push(RW.watch(RW.P.sessions + '/' + sid + '/votes', v => { S.votes = v || {}; repaintActive(); }));
+      repaintActive();
+    }
+
+    RW.watch(RW.P.live, (live, err) => {
+      if(err){ setChip('stale', 'Connection lost'); return; }
+      S.live = live;
+      if(!live || !live.sessionId || live.deckId !== deckId){
+        if(S.sid) attachSession(null);
+        setChip('off', live && live.sessionId ? 'A different deck is live' : 'No live session');
+        return;
+      }
+      if(live.sessionId !== S.sid){
+        attachSession(live.sessionId);
+        setChip('on', 'Live');
+        RW.get(RW.P.sessions + '/' + live.sessionId + '/meta/name').then(n => setChip('on', 'Live · ' + (n || 'session')));
+      }
+      if(typeof live.seq === 'number' && live.seq > S.seq){
+        S.seq = live.seq;
+        if(live.src !== 'deck' && typeof live.slide === 'number' && live.slide !== idx) go(live.slide, true);
+      }
+    });
+
+    chipBtn.addEventListener('click', async () => {
+      const name = prompt('Name this session (the setting, the group, the date):', deck.title + ' · ' + RW.dateStamp(Date.now()));
+      if(name === null) return;
+      await startSession(name || deck.title);
+    });
+
+    async function startSession(name){
+      const sid = 's' + RW.uid().replace(/[^A-Za-z0-9_-]/g, '');
+      const questions = {};
+      visible.filter(s => s.kind === 'q' && s.type !== 'join').forEach(s => { questions[s.id] = { type: s.type, question: s.question || '', options: s.options || null }; });
+      await RW.set(RW.P.sessions + '/' + sid + '/meta', { name, deckId, deckTitle: deck.title, startedAt: Date.now(), questions });
+      S.sid = sid; S.seq = 0;
+      await publish();
+      RW.toast('Session started');
+    }
+
+    go(0, true);
+  }
+})();
+</script>
+</body>
+</html>

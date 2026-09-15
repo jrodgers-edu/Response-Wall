@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Response Wall Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@700;800&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style id="ui"></style>
+<style>
+/* =====================================================================
+   STUDIO — the deck library and editor. Upload an rsn-interactive-deck
+   file, drop question slides between its slides, retype any text.
+   ===================================================================== */
+.bar{display:flex;align-items:center;gap:14px;padding:12px 22px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;flex-wrap:wrap}
+.bar .sp{flex:1}
+.bar .who{font-size:12.5px;color:var(--grey)}
+.save{font-size:12px;color:var(--grey);letter-spacing:.06em;text-transform:uppercase;font-weight:700;min-width:70px}
+.save.busy{color:var(--orange)}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 22px 60px}
+h1.page{font-family:'Roboto Slab';font-weight:800;font-size:28px;margin-bottom:6px}
+.lede{color:var(--grey);margin-bottom:24px;max-width:64ch;line-height:1.5}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.deckcard{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px 20px 16px;box-shadow:0 8px 24px rgba(0,0,0,.04);position:relative;overflow:hidden;display:flex;flex-direction:column;gap:6px}
+.deckcard::before{content:"";position:absolute;left:0;top:0;height:6px;width:100%;background:var(--orange)}
+.deckcard:nth-child(5n+2)::before{background:var(--blue)}.deckcard:nth-child(5n+3)::before{background:var(--sky)}.deckcard:nth-child(5n+4)::before{background:var(--yellow)}.deckcard:nth-child(5n)::before{background:var(--red)}
+.deckcard h3{font-family:'Roboto Slab';font-weight:700;font-size:18px;line-height:1.2;margin-top:6px}
+.deckcard .meta{font-size:12.5px;color:var(--grey)}
+.deckcard .acts{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.upload{border:2px dashed var(--pale);border-radius:18px;padding:34px 22px;text-align:center;color:var(--grey);cursor:pointer;transition:border-color .15s,background .15s;background:#fff}
+.upload:hover,.upload.over{border-color:var(--orange);background:#fff8f5}
+.upload b{display:block;font-family:'Roboto Slab';color:var(--ink);font-size:17px;margin-bottom:4px}
+/* editor */
+.ed{display:grid;grid-template-columns:270px 1fr;min-height:calc(100vh - 62px)}
+.strip{border-right:1px solid var(--line);background:#fff;overflow-y:auto;padding:12px 10px 40px}
+.sl{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-radius:12px;cursor:pointer;border:1px solid transparent;margin-bottom:4px;user-select:none}
+.sl:hover{background:#faf7f2}
+.sl.on{background:#fff4ef;border-color:#f3c9ba}
+.sl.hidden{opacity:.45}
+.sl.drag{opacity:.35}
+.sl.overtop{box-shadow:0 -3px 0 var(--orange)}
+.sl.overbot{box-shadow:0 3px 0 var(--orange)}
+.sl .n{font-family:'Roboto Slab';font-weight:800;font-size:12px;color:var(--grey);min-width:20px;padding-top:2px}
+.sl .t{flex:1;min-width:0}
+.sl .t b{display:block;font-size:13px;font-weight:500;line-height:1.3;color:var(--ink);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--orange);margin-top:2px}
+.badge.html{color:var(--grey)}
+.strip .add{margin:10px 4px 0}
+.main{padding:16px 22px 40px;min-width:0}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.tools .sp{flex:1}
+.frame{position:relative;width:100%;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 12px 36px rgba(0,0,0,.07)}
+.frame iframe{position:absolute;left:0;top:0;width:1280px;height:720px;border:0;transform-origin:0 0}
+.hintline{font-size:12.5px;color:var(--grey);margin:10px 2px 0;font-style:italic}
+.notesbox{margin-top:18px}
+.notesbox textarea{min-height:120px;resize:vertical;line-height:1.5;font-size:14px}
+.titlein{font-family:'Roboto Slab';font-weight:800;font-size:18px;border:1px solid transparent;background:transparent;padding:6px 8px;border-radius:8px;min-width:200px;max-width:520px;width:40vw}
+.titlein:hover{border-color:var(--line)}
+.opts textarea{min-height:100px;font-size:15px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.problems{background:#fff4f4;border:1px solid #f0c2c2;border-radius:12px;padding:12px 14px;color:var(--red);font-size:14px;margin-top:12px}
+.empty{padding:50px 20px;text-align:center;color:var(--grey);line-height:1.5}
+@media (max-width:880px){.ed{grid-template-columns:1fr}.strip{max-height:36vh;border-right:none;border-bottom:1px solid var(--line)}.titlein{width:100%;max-width:none}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="qr.js"></script>
+<script src="shared.js"></script>
+<script>
+(function(){
+  "use strict";
+  document.getElementById('ui').textContent = RW.UI_CSS;
+  const root = document.getElementById('root');
+  const esc = RW.esc, attr = RW.attr;
+  const S = { user: null, decks: {}, deckId: null, deck: null, sel: 0, saveT: null, dirty: false, unsubDecks: null };
+
+  RW.requireUser(root, user => {
+    S.user = user;
+    S.unsubDecks = RW.watch(RW.P.decks, v => { S.decks = v || {}; if(!S.deckId) library(); });
+    const id = new URLSearchParams(location.search).get('deck');
+    if(id) openDeck(id); else library();
+  });
+
+  function bar(inner){
+    return '<div class="bar"><span class="mark">Response Wall Studio</span>' + inner + '<span class="sp"></span><span class="who">' + esc(S.user.email || '') + '</span><button class="btn sm ghost" id="signout">Sign out</button></div>';
+  }
+  function wireBar(){ const b = document.getElementById('signout'); if(b) b.onclick = () => RW.signOut(); }
+
+  /* ================================================================
+     LIBRARY
+     ================================================================ */
+  function library(){
+    S.deckId = null; S.deck = null;
+    history.replaceState(null, '', location.pathname);
+    const decks = Object.entries(S.decks).sort((a, b) => (b[1].updatedAt || 0) - (a[1].updatedAt || 0));
+    root.innerHTML = bar('') + '<div class="wrap">' +
+      '<h1 class="page">Decks</h1><p class="lede">Upload a deck built with the rsn-interactive-deck skill. Question slides you add borrow its styles, so they look like they were always there.</p>' +
+      '<div class="upload" id="drop"><b>Upload a deck</b>Drop an .html file here, or click to choose one<input type="file" id="file" accept=".html,.htm,text/html" hidden></div>' +
+      '<div id="problems"></div>' +
+      '<div class="grid" style="margin-top:22px">' + decks.map(([id, d]) =>
+        '<div class="deckcard"><h3>' + esc(d.title) + '</h3><div class="meta">' + (d.slides || 0) + ' slides · ' + (d.questions || 0) + ' questions · updated ' + RW.dateStamp(d.updatedAt || Date.now()) + '</div>' +
+        '<div class="acts"><button class="btn sm primary" data-open="' + attr(id) + '">Open</button><a class="btn sm" href="present.html?deck=' + attr(id) + '" target="_blank">Present</a><button class="btn sm danger" data-del="' + attr(id) + '">Delete</button></div></div>').join('') +
+      '</div>' + (decks.length ? '' : '<div class="empty">No decks yet.</div>') + '</div>';
+    wireBar();
+    const drop = document.getElementById('drop'), file = document.getElementById('file');
+    drop.onclick = () => file.click();
+    file.onchange = () => { if(file.files[0]) importFile(file.files[0]); };
+    ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+    ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+    drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if(f) importFile(f); });
+    root.querySelectorAll('[data-open]').forEach(b => b.onclick = () => openDeck(b.dataset.open));
+    root.querySelectorAll('[data-del]').forEach(b => b.onclick = () => deleteDeck(b.dataset.del));
+  }
+
+  async function importFile(file){
+    const text = await file.text();
+    const { deck, problems } = RW.parseDeckFile(text);
+    const box = document.getElementById('problems');
+    if(problems.length && !deck.slides.length){ box.innerHTML = '<div class="problems">' + problems.map(esc).join('<br>') + '</div>'; return; }
+    const id = 'd' + RW.uid().replace(/[^A-Za-z0-9_-]/g, '');
+    S.deckId = id; S.deck = deck;
+    await save(true);
+    openDeck(id);
+    RW.toast('Deck imported: ' + deck.slides.length + ' slides');
+  }
+
+  function deleteDeck(id){
+    const d = S.decks[id] || {};
+    const m = RW.modal('<h2>Delete “' + esc(d.title || 'this deck') + '”?</h2><p class="muted">Saved sessions and their responses are kept. Only the deck goes.</p><div class="row"><button class="btn" data-close>Keep it</button><button class="btn primary" id="ok">Delete</button></div>');
+    m.querySelector('#ok').onclick = async () => { RW.closeModal(); await RW.remove(RW.P.decks + '/' + id); await RW.remove(RW.P.deckdocs + '/' + id); RW.toast('Deleted'); };
+  }
+
+  /* ================================================================
+     SAVE
+     ================================================================ */
+  function markDirty(){
+    S.dirty = true;
+    const el = document.getElementById('save'); if(el){ el.textContent = 'Unsaved'; el.className = 'save busy'; }
+    clearTimeout(S.saveT); S.saveT = setTimeout(() => save(false), 900);
+  }
+  async function save(fresh){
+    if(!S.deck || !S.deckId) return;
+    const el = document.getElementById('save'); if(el){ el.textContent = 'Saving'; el.className = 'save busy'; }
+    S.deck.updatedAt = Date.now();
+    if(fresh) S.deck.createdAt = S.deck.createdAt || Date.now();
+    const meta = { title: S.deck.title, updatedAt: S.deck.updatedAt, slides: S.deck.slides.filter(s => !s.hidden).length, questions: S.deck.slides.filter(s => s.kind === 'q' && s.type !== 'join' && !s.hidden).length };
+    try{
+      await RW.set(RW.P.deckdocs + '/' + S.deckId, S.deck);
+      await RW.set(RW.P.decks + '/' + S.deckId, meta);
+      S.dirty = false;
+      if(el){ el.textContent = 'Saved'; el.className = 'save'; }
+    }catch(e){
+      console.error(e);
+      if(el){ el.textContent = 'Not saved'; el.className = 'save busy'; }
+      RW.toast('Save failed: ' + (e.message || e));
+    }
+  }
+  window.addEventListener('beforeunload', e => { if(S.dirty){ e.preventDefault(); e.returnValue = ''; } });
+
+  /* ================================================================
+     EDITOR
+     ================================================================ */
+  async function openDeck(id){
+    const deck = S.deck && S.deckId === id ? S.deck : await RW.get(RW.P.deckdocs + '/' + id);
+    if(!deck){ RW.toast('Deck not found'); library(); return; }
+    deck.slides = deck.slides || []; deck.notes = deck.notes || {}; deck.styles = deck.styles || []; deck.modules = deck.modules || [];
+    S.deckId = id; S.deck = deck; S.sel = 0;
+    history.replaceState(null, '', location.pathname + '?deck=' + id);
+    root.innerHTML = bar(
+      '<button class="btn sm" id="back">‹ Decks</button>' +
+      '<input class="titlein" id="title" value="' + attr(deck.title) + '" aria-label="Deck title">' +
+      '<span class="save" id="save">Saved</span>' +
+      '<a class="btn sm primary" href="present.html?deck=' + attr(id) + '" target="_blank">Present ↗</a>' +
+      '<a class="btn sm" href="remote.html" target="_blank">Remote ↗</a>' +
+      '<button class="btn sm" id="replace">Replace slides from file</button><input type="file" id="rfile" accept=".html,.htm" hidden>' +
+      '<button class="btn sm" id="footerbtn">Footer</button>') +
+      '<div class="ed"><div class="strip" id="strip"></div><div class="main" id="main"></div></div>';
+    wireBar();
+    document.getElementById('back').onclick = () => library();
+    document.getElementById('title').addEventListener('input', e => { S.deck.title = e.target.value.trim() || 'Untitled deck'; markDirty(); });
+    document.getElementById('replace').onclick = () => document.getElementById('rfile').click();
+    document.getElementById('rfile').onchange = e => { if(e.target.files[0]) replaceFlow(e.target.files[0]); };
+    document.getElementById('footerbtn').onclick = footerFlow;
+    paintStrip(); paintMain();
+  }
+
+  function paintStrip(){
+    const strip = document.getElementById('strip');
+    strip.innerHTML = S.deck.slides.map((s, i) =>
+      '<div class="sl' + (i === S.sel ? ' on' : '') + (s.hidden ? ' hidden' : '') + '" draggable="true" data-i="' + i + '"><span class="n">' + (i + 1) + '</span><div class="t"><b>' + esc(RW.slideTitle(s)) + '</b><span class="badge ' + (s.kind === 'q' ? '' : 'html') + '">' + (s.kind === 'q' ? RW.Q_TYPES[s.type].label : 'Slide') + (s.hidden ? ' · hidden' : '') + '</span></div></div>').join('') +
+      '<button class="btn sm add" id="addend">+ Question at the end</button>';
+    strip.querySelectorAll('.sl').forEach(el => {
+      el.onclick = () => { S.sel = +el.dataset.i; paintStrip(); paintMain(); };
+      el.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', el.dataset.i); el.classList.add('drag'); });
+      el.addEventListener('dragend', () => el.classList.remove('drag'));
+      el.addEventListener('dragover', e => { e.preventDefault(); const r = el.getBoundingClientRect(); const top = e.clientY < r.top + r.height / 2; el.classList.toggle('overtop', top); el.classList.toggle('overbot', !top); });
+      el.addEventListener('dragleave', () => el.classList.remove('overtop', 'overbot'));
+      el.addEventListener('drop', e => {
+        e.preventDefault(); el.classList.remove('overtop', 'overbot');
+        const from = +e.dataTransfer.getData('text/plain'), r = el.getBoundingClientRect();
+        let to = +el.dataset.i + (e.clientY < r.top + r.height / 2 ? 0 : 1);
+        if(isNaN(from) || from === to || from + 1 === to) return;
+        const [item] = S.deck.slides.splice(from, 1);
+        if(from < to) to -= 1;
+        S.deck.slides.splice(to, 0, item);
+        reanchor(); S.sel = to; markDirty(); paintStrip(); paintMain();
+      });
+    });
+    document.getElementById('addend').onclick = () => addQuestionAfter(S.deck.slides.length - 1);
+    const on = strip.querySelector('.sl.on'); if(on) on.scrollIntoView({ block: 'nearest' });
+  }
+
+  /* every question remembers the html slide before it, so a revised file can put it back */
+  function reanchor(){
+    let last = null;
+    S.deck.slides.forEach(s => { if(s.kind === 'html') last = s.key; else s.anchor = last; });
+  }
+
+  function paintMain(){
+    const main = document.getElementById('main');
+    const s = S.deck.slides[S.sel];
+    if(!s){ main.innerHTML = '<div class="empty">This deck has no slides. Add a question, or replace the slides from a file.</div>'; return; }
+    const isQ = s.kind === 'q';
+    main.innerHTML =
+      '<div class="tools">' +
+        '<button class="btn sm primary" id="addq">+ Question after this</button>' +
+        (isQ ? '<button class="btn sm" id="editq">Edit question</button>' : '') +
+        '<button class="btn sm" id="up" ' + (S.sel === 0 ? 'disabled' : '') + '>↑</button><button class="btn sm" id="down" ' + (S.sel === S.deck.slides.length - 1 ? 'disabled' : '') + '>↓</button>' +
+        '<button class="btn sm" id="hide">' + (s.hidden ? 'Show in deck' : 'Hide from deck') + '</button>' +
+        '<span class="sp"></span>' +
+        '<button class="btn sm danger" id="del">Delete slide</button>' +
+      '</div>' +
+      '<div class="frame" id="frame"><iframe id="pv" title="Slide preview"></iframe></div>' +
+      '<p class="hintline">' + (isQ ? 'Question slides are edited through the form. Wording changes travel to every phone the moment you present.' : 'Click any text on the slide and retype it. Layout, images and animations stay as uploaded.') + '</p>' +
+      '<div class="notesbox"><label class="f">Presenter notes (blank line between paragraphs)</label><textarea id="notes">' + esc(((S.deck.notes || {})[s.key] || []).join('\n\n')) + '</textarea></div>';
+    document.getElementById('addq').onclick = () => addQuestionAfter(S.sel);
+    if(isQ) document.getElementById('editq').onclick = () => questionForm(s, false);
+    document.getElementById('up').onclick = () => move(-1);
+    document.getElementById('down').onclick = () => move(1);
+    document.getElementById('hide').onclick = () => { s.hidden = !s.hidden; markDirty(); paintStrip(); paintMain(); };
+    document.getElementById('del').onclick = () => deleteSlide();
+    document.getElementById('notes').addEventListener('input', e => {
+      const paras = e.target.value.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+      if(paras.length) S.deck.notes[s.key] = paras; else delete S.deck.notes[s.key];
+      markDirty();
+    });
+    preview(s);
+  }
+
+  function move(d){
+    const to = S.sel + d; if(to < 0 || to >= S.deck.slides.length) return;
+    const [item] = S.deck.slides.splice(S.sel, 1); S.deck.slides.splice(to, 0, item);
+    S.sel = to; reanchor(); markDirty(); paintStrip(); paintMain();
+  }
+
+  function deleteSlide(){
+    const s = S.deck.slides[S.sel];
+    const m = RW.modal('<h2>Delete this slide?</h2><p class="muted">' + esc(RW.slideTitle(s)) + '</p><div class="row"><button class="btn" data-close>Keep it</button><button class="btn primary" id="ok">Delete</button></div>');
+    m.querySelector('#ok').onclick = () => {
+      RW.closeModal();
+      S.deck.slides.splice(S.sel, 1); delete S.deck.notes[s.key];
+      S.sel = Math.max(0, Math.min(S.sel, S.deck.slides.length - 1));
+      reanchor(); markDirty(); paintStrip(); paintMain();
+    };
+  }
+
+  /* ---------- the preview iframe: deck css + one slide, text editable ---------- */
+  const EDIT_CSS = `
+html,body{overflow:hidden;background:#fff}
+.deck{height:100vh;width:100vw}
+.slide{opacity:1!important;visibility:visible!important;transform:none!important;transition:none!important;pointer-events:auto!important}
+.reveal,.stop,.fx-pop,.fx-leaf,.fx-words .w,.wc,.wbar,.wallcloud .w{opacity:1!important;transform:none!important;animation:none!important}
+.fx-leaf{transform:translate(-50%,-50%)!important}
+.fx-fill{height:var(--h,80%)!important}.fx-pillar{height:var(--h,60%)!important}
+.fx-line,.fx-fanlines path{stroke-dashoffset:0!important}.fx-curve text{opacity:1!important}
+.fx-hl{background-size:100% 1.15em!important}.fx-underline::after{transform:none!important}
+.navbtn,.dots,.counter,.notehint,#notes{display:none!important}
+[data-rw]{cursor:text;border-radius:4px}
+[data-rw]:hover{outline:2px dashed rgba(233,78,29,.55);outline-offset:3px}
+[data-rw]:focus{outline:2px solid #E94E1D;outline-offset:3px;background:rgba(250,182,11,.10)}
+`;
+  const RINGS_JS = `(function(){var bg=document.getElementById('bg');if(!bg)return;var cols=['#E94E1D','#1D6FB8','#2EA5DE','#FAB60B','#BD1823'];for(var i=0;i<7;i++){var r=document.createElement('div');r.className='ring';var s=120+Math.random()*360;r.style.width=r.style.height=s+'px';r.style.left=(Math.random()*100)+'%';r.style.top=(Math.random()*100)+'%';r.style.borderColor=cols[i%5];r.style.animationDuration=(26+Math.random()*30)+'s';r.style.animationDelay=(-Math.random()*20)+'s';bg.appendChild(r);}})();`;
+
+  function preview(s){
+    const frame = document.getElementById('frame'), iframe = document.getElementById('pv');
+    const fit = () => { const w = frame.clientWidth, sc = w / 1280; iframe.style.transform = 'scale(' + sc + ')'; frame.style.height = (720 * sc) + 'px'; };
+    fit(); window.onresize = fit;
+
+    const modules = JSON.stringify(S.deck.modules || []);
+    const orbitJs = `(function(){var ring=document.getElementById('spinring');var M=${modules};if(!ring||!M.length)return;M.forEach(function(m,i){var a=(i/M.length)*2*Math.PI-Math.PI/2;var n=document.createElement('div');n.className='node'+(i===0?' sel':'');n.style.left=(50+42*Math.cos(a))+'%';n.style.top=(50+42*Math.sin(a))+'%';n.style.background=m[3];n.innerHTML='<div>'+m[0]+'</div>';ring.appendChild(n);});var t=document.getElementById('mtitle'),d=document.getElementById('mdesc'),num=document.getElementById('mnum');if(num)num.textContent='Item '+M[0][0];if(t)t.textContent=M[0][1];if(d)d.textContent=M[0][2];})();`;
+    const counterJs = `document.querySelectorAll('[data-count]').forEach(function(el){el.textContent=el.dataset.count+(el.dataset.suffix||'');});`;
+
+    const body = s.kind === 'q' ? RW.questionSlideHtml(s) : s.html;
+    iframe.srcdoc = '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
+      '<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;600;700;800&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">' +
+      '<style>' + S.deck.styles.map(x => x.css).join('\n') + '</style><style>' + RW.WALL_CSS + '</style><style>' + EDIT_CSS + '</style></head>' +
+      '<body><div id="bg"></div><img class="brandlogo" src="logo.png" alt=""><div class="deck">' + body + '</div>' +
+      '<div class="slide-foot">' + esc(S.deck.footer || '') + '</div>' +
+      '<script>' + RINGS_JS + orbitJs + counterJs + '<\/script></body></html>';
+
+    iframe.onload = () => {
+      const doc = iframe.contentDocument; if(!doc) return;
+      const sec = doc.querySelector('section.slide'); if(!sec) return;
+      sec.classList.add('active');
+      if(s.kind === 'q'){ RW.paintQuestion(sec, {}, {}); return; }
+      markEditable(sec);
+      let t = null;
+      doc.addEventListener('input', () => {
+        clearTimeout(t);
+        t = setTimeout(() => {
+          const clone = sec.cloneNode(true);
+          clone.classList.remove('active');
+          clone.querySelectorAll('[data-rw]').forEach(el => { el.removeAttribute('contenteditable'); el.removeAttribute('data-rw'); el.removeAttribute('spellcheck'); });
+          s.html = clone.outerHTML;
+          const row = document.querySelector('.sl.on .t b'); if(row) row.textContent = RW.slideTitle(s);
+          markDirty();
+        }, 350);
+      });
+      /* Enter inside a heading should not spawn a div */
+      doc.addEventListener('keydown', e => { if(e.key === 'Enter' && e.target.closest && e.target.closest('h1,h2,h3,h4,.kicker,.tag,.t,.s,.lab')){ e.preventDefault(); } });
+    };
+  }
+
+  function markEditable(rootEl){
+    const SKIP = new Set(['SVG', 'SCRIPT', 'STYLE', 'IMG', 'BUTTON', 'INPUT', 'TEXTAREA', 'SELECT']);
+    const hasText = el => [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+    const walk = el => {
+      if(SKIP.has(el.tagName.toUpperCase()) || el.closest('svg')) return;
+      if(hasText(el)){
+        el.setAttribute('contenteditable', 'true');
+        el.setAttribute('spellcheck', 'false');
+        el.setAttribute('data-rw', '1');
+        return;
+      }
+      [...el.children].forEach(walk);
+    };
+    [...rootEl.children].forEach(walk);
+  }
+
+  /* ---------- question slides ---------- */
+  function addQuestionAfter(i){
+    const q = RW.newQuestion('text');
+    questionForm(q, true, i);
+  }
+
+  function questionForm(q, isNew, afterIndex){
+    const types = Object.entries(RW.Q_TYPES).map(([k, v]) => '<option value="' + k + '"' + (q.type === k ? ' selected' : '') + '>' + v.label + '</option>').join('');
+    const m = RW.modal('<h2>' + (isNew ? 'New question slide' : 'Edit question slide') + '</h2><p class="muted">It takes the deck\'s kicker, heading and card styles, so it will look like the slides around it.</p>' +
+      '<label class="f">Type</label><select id="qtype">' + types + '</select>' +
+      '<div id="qfields"></div>' +
+      '<div class="row"><span class="muted" style="flex:1;font-size:12px">id ' + esc(q.id) + '</span><button class="btn" data-close>Cancel</button><button class="btn primary" id="ok">' + (isNew ? 'Add slide' : 'Save') + '</button></div>');
+    const fields = m.querySelector('#qfields');
+    const paint = () => {
+      const t = m.querySelector('#qtype').value;
+      let h = '<label class="f">Kicker (small label above the heading)</label><input type="text" id="qkick" value="' + attr(q.kicker || 'Response wall') + '">';
+      h += '<label class="f">' + (t === 'join' ? 'Heading' : 'Question') + '</label><input type="text" id="qq" value="' + attr(q.question || (t === 'join' ? 'Scan to join the response wall' : '')) + '" maxlength="220">';
+      h += '<label class="f">Hint (optional, italic under the question)</label><input type="text" id="qhint" value="' + attr(q.hint || '') + '" maxlength="220">';
+      if(t === 'choice') h += '<div class="opts"><label class="f">Options, one per line</label><textarea id="qopts">' + esc((q.options || ['', '', '']).join('\n')) + '</textarea></div><label class="f" style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:14px"><input type="checkbox" id="qmulti" style="width:auto" ' + (q.multi ? 'checked' : '') + '> Allow more than one</label>';
+      if(t === 'scale') h += '<div class="two"><div><label class="f">From</label><input type="number" id="qmin" value="' + (q.min || 1) + '" min="0" max="9"></div><div><label class="f">To</label><input type="number" id="qmax" value="' + (q.max || 5) + '" min="2" max="10"></div></div><div class="two"><div><label class="f">Label at the low end</label><input type="text" id="qminl" value="' + attr(q.minLabel || '') + '"></div><div><label class="f">Label at the high end</label><input type="text" id="qmaxl" value="' + attr(q.maxLabel || '') + '"></div></div>';
+      fields.innerHTML = h;
+      m.querySelector('#qq').focus();
+    };
+    paint();
+    m.querySelector('#qtype').onchange = paint;
+    m.querySelector('#ok').onclick = () => {
+      const t = m.querySelector('#qtype').value;
+      const v = id => { const el = m.querySelector('#' + id); return el ? el.value : ''; };
+      if(!v('qq').trim()){ RW.toast('Give it a question'); return; }
+      q.type = t; q.kicker = v('qkick').trim() || 'Response wall'; q.question = v('qq').trim(); q.hint = v('qhint').trim();
+      if(t === 'choice'){
+        q.options = v('qopts').split('\n').map(x => x.trim()).filter(Boolean);
+        q.multi = !!m.querySelector('#qmulti').checked;
+        if(q.options.length < 2){ RW.toast('At least two options'); return; }
+      } else { delete q.options; delete q.multi; }
+      if(t === 'scale'){
+        q.min = Math.max(0, parseInt(v('qmin'), 10) || 1); q.max = Math.min(10, parseInt(v('qmax'), 10) || 5);
+        if(q.max <= q.min){ RW.toast('The scale needs a higher top than bottom'); return; }
+        q.minLabel = v('qminl').trim(); q.maxLabel = v('qmaxl').trim();
+      } else { delete q.min; delete q.max; delete q.minLabel; delete q.maxLabel; }
+      RW.closeModal();
+      if(isNew){
+        const at = Math.min(S.deck.slides.length, (afterIndex == null ? S.deck.slides.length - 1 : afterIndex) + 1);
+        S.deck.slides.splice(at, 0, q); S.sel = at;
+      }
+      reanchor(); markDirty(); paintStrip(); paintMain();
+    };
+  }
+
+  /* ---------- replace html slides from a revised file ---------- */
+  async function replaceFlow(file){
+    const text = await file.text();
+    const { deck: fresh, problems } = RW.parseDeckFile(text);
+    if(!fresh.slides.length){ RW.toast(problems[0] || 'Nothing usable in that file'); return; }
+    const m = RW.modal('<h2>Replace the slides?</h2><p class="muted">The uploaded slides, styles, orbit and notes replace the current ones. Your question slides stay where they were, anchored to the slide each one followed. Text you retyped in the studio on the old slides is lost.</p>' +
+      '<p class="muted" style="margin-top:8px">' + fresh.slides.length + ' slides in the new file.</p><div class="row"><button class="btn" data-close>Cancel</button><button class="btn primary" id="ok">Replace</button></div>');
+    m.querySelector('#ok').onclick = async () => {
+      RW.closeModal();
+      S.deck = RW.mergeRevision(S.deck, fresh);
+      S.sel = 0; reanchor(); markDirty();
+      document.getElementById('title').value = S.deck.title;
+      paintStrip(); paintMain();
+      RW.toast('Slides replaced');
+    };
+  }
+
+  function footerFlow(){
+    const m = RW.modal('<h2>Footer line</h2><label class="f">Shown bottom-left on every slide</label><input type="text" id="ft" value="' + attr(S.deck.footer || '') + '"><div class="row"><button class="btn" data-close>Cancel</button><button class="btn primary" id="ok">Save</button></div>');
+    m.querySelector('#ok').onclick = () => { S.deck.footer = m.querySelector('#ft').value.trim(); RW.closeModal(); markDirty(); paintMain(); };
+  }
+})();
+</script>
+</body>
+</html>

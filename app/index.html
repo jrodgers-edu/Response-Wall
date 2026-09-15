@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#E94E1D">
+<title>Response Wall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@700;800&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style id="ui"></style>
+<style>
+/* =====================================================================
+   PARTICIPANT — the page behind the QR. Anonymous. Shows whatever
+   question is live and nothing else.
+   ===================================================================== */
+body{background:#fff}
+.join{min-height:100vh;display:flex;flex-direction:column;max-width:640px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) 20px max(20px,env(safe-area-inset-bottom))}
+.head{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px}
+.head img{height:38px}
+.live{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--grey)}
+.live i{width:8px;height:8px;border-radius:50%;background:#4ac26b;display:block}
+.live.off i{background:var(--pale)}
+.live.stale i{background:var(--red)}
+.body{flex:1;display:flex;flex-direction:column;justify-content:center;padding:10px 0 30px}
+.kick{font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--orange);display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.kick::before{content:"";width:28px;height:3px;background:var(--orange);border-radius:2px}
+h1{font-family:'Roboto Slab';font-weight:800;font-size:clamp(24px,6.2vw,34px);line-height:1.12;letter-spacing:-.3px;color:var(--ink);margin-bottom:8px}
+.hint{color:var(--grey);font-style:italic;font-size:15px;line-height:1.45;margin-bottom:20px}
+.waiting h1{color:#aeb9bd;font-size:clamp(22px,5.5vw,30px)}
+.waiting p{color:var(--grey);line-height:1.5}
+.waiting .rings{position:relative;width:110px;height:110px;margin:0 0 26px}
+.waiting .rings i{position:absolute;inset:0;border-radius:50%;border:3px solid;opacity:.35;animation:spin 14s linear infinite}
+.waiting .rings i:nth-child(2){inset:18px;border-color:var(--blue);animation-duration:9s;animation-direction:reverse}
+.waiting .rings i:nth-child(3){inset:36px;border-color:var(--yellow);animation-duration:6s}
+.waiting .rings i:nth-child(1){border-color:var(--orange)}
+@keyframes spin{to{transform:rotate(360deg)}}
+textarea{min-height:130px;resize:none;font-size:18px;line-height:1.4;border-radius:14px;padding:14px}
+input.word{font-size:20px;border-radius:14px;padding:14px;font-family:'Roboto Slab';font-weight:700}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}
+.count{font-size:12px;color:var(--grey);font-variant-numeric:tabular-nums}
+.count.near{color:var(--orange)}
+.btn.big{font-size:17px;padding:14px 22px;border-radius:14px}
+.sent{border:1px solid var(--line);border-left:5px solid #4ac26b;border-radius:16px;padding:20px 20px 16px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.06);animation:land .4s ease both}
+@keyframes land{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.sent h2{font-family:'Roboto Slab';font-weight:800;font-size:22px;margin:4px 0 6px}
+.sent p{color:var(--grey);line-height:1.5;margin-bottom:14px}
+.sent blockquote{margin:0 0 16px;padding-left:14px;border-left:3px solid var(--pale);font-size:17px;line-height:1.4;color:var(--ink)}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{display:flex;align-items:center;gap:14px;text-align:left;border:2px solid var(--line);background:#fff;border-radius:16px;padding:16px 18px;font-size:17px;font-weight:500;color:var(--ink);cursor:pointer;transition:border-color .15s,background .15s;line-height:1.3}
+.opt i{flex:0 0 22px;width:22px;height:22px;border-radius:50%;border:2px solid var(--pale);display:block;transition:all .15s}
+.opt.multi i{border-radius:6px}
+.opt.on{border-color:var(--orange);background:#fff7f4}
+.opt.on i{background:var(--orange);border-color:var(--orange);box-shadow:inset 0 0 0 4px #fff}
+.scale{display:flex;gap:8px;margin:6px 0 10px}
+.scale button{flex:1;aspect-ratio:1;border:2px solid var(--line);background:#fff;border-radius:14px;font-family:'Roboto Slab';font-weight:800;font-size:clamp(18px,5vw,26px);color:var(--ink);cursor:pointer;transition:all .15s}
+.scale button.on{border-color:var(--orange);background:var(--orange);color:#fff;transform:scale(1.06)}
+.slabels{display:flex;justify-content:space-between;font-size:13px;color:var(--grey);font-style:italic;margin-bottom:18px}
+.results{margin-top:22px;border-top:1px solid var(--line);padding-top:16px}
+.results .lab{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--grey);margin-bottom:10px}
+.rbar{margin-bottom:9px}
+.rbar .l{display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px}
+.rbar .l b{color:var(--c)}
+.rbar .t{height:10px;background:#f1f1f1;border-radius:6px;overflow:hidden}
+.rbar .f{height:100%;background:var(--c);border-radius:6px;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.rscale{display:flex;align-items:flex-end;gap:6px;height:80px;border-bottom:2px solid var(--pale)}
+.rscale div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:3px;font-size:11px;color:var(--grey)}
+.rscale div i{display:block;width:100%;background:var(--c);border-radius:5px 5px 0 0;transition:height .6s cubic-bezier(.2,.8,.2,1)}
+.rscale div b{font-size:12px;color:var(--c)}
+.foot{color:var(--grey);font-size:12.5px;line-height:1.5;border-top:1px solid var(--line);padding-top:12px}
+</style>
+</head>
+<body>
+<div class="join">
+  <div class="head">
+    <img src="logo.png" alt="Cornwall Research School">
+    <span class="live off" id="live"><i></i><span id="livetext">Connecting</span></span>
+  </div>
+  <div class="body" id="body"></div>
+  <div class="foot">Anonymous. Nothing you write is stored against your name or your device, and nothing reaches the screen until the presenter shows it.</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="shared.js"></script>
+<script>
+(function(){
+  "use strict";
+  document.getElementById('ui').textContent = RW.UI_CSS;
+  RW.init();
+  const cid = RW.clientId();
+  const body = document.getElementById('body');
+  const esc = RW.esc;
+
+  const S = { live: null, qid: null, sent: [], vote: null, unsub: null, votes: {} };
+  const MAX_TEXT = 180, MAX_WORD = 40;
+
+  function setLive(mode, text){
+    const l = document.getElementById('live');
+    l.className = 'live ' + mode;
+    document.getElementById('livetext').textContent = text;
+  }
+
+  function waiting(title, text){
+    body.innerHTML = '<div class="waiting"><div class="rings"><i></i><i></i><i></i></div><h1>' + esc(title) + '</h1><p>' + esc(text) + '</p></div>';
+  }
+
+  function kickFor(q){
+    return '<div class="kick">' + esc(q.type === 'words' ? 'One or two words' : q.type === 'choice' ? (q.multi ? 'Choose any that apply' : 'Choose one') : q.type === 'scale' ? 'Rate it' : 'Your answer') + '</div>';
+  }
+
+  function render(){
+    const live = S.live, q = live && live.question;
+    if(!live || !live.sessionId){ waiting('Nothing live right now', 'Keep this page open. When a session starts, the first question appears here on its own.'); return; }
+    if(!q){ waiting('Watch the screen', 'The next question will appear here when the presenter reaches it.'); return; }
+    if(q.type === 'text')   renderText(q);
+    if(q.type === 'words')  renderWords(q);
+    if(q.type === 'choice') renderChoice(q);
+    if(q.type === 'scale')  renderScale(q);
+  }
+
+  /* ---------- open text ---------- */
+  function renderText(q){
+    if(S.sent.length && !S.composing){ renderSent(q, S.sent[S.sent.length - 1], 'Add another'); return; }
+    body.innerHTML = kickFor(q) + '<h1>' + esc(q.question) + '</h1>' + (q.hint ? '<p class="hint">' + esc(q.hint) + '</p>' : '') +
+      '<textarea id="t" maxlength="' + MAX_TEXT + '" placeholder="Type here…" autocomplete="off"></textarea>' +
+      '<div class="row"><span class="count" id="c">0 / ' + MAX_TEXT + '</span><button class="btn primary big" id="send" disabled>Send</button></div>';
+    const t = document.getElementById('t'), c = document.getElementById('c'), send = document.getElementById('send');
+    t.addEventListener('input', () => { const n = t.value.trim().length; c.textContent = t.value.length + ' / ' + MAX_TEXT; c.classList.toggle('near', t.value.length > MAX_TEXT - 20); send.disabled = !n; });
+    t.focus();
+    send.addEventListener('click', () => submitPending(q, t.value.trim().slice(0, MAX_TEXT)));
+  }
+
+  function renderWords(q){
+    if(S.sent.length && !S.composing){ renderSent(q, S.sent[S.sent.length - 1], 'Add another word'); return; }
+    body.innerHTML = kickFor(q) + '<h1>' + esc(q.question) + '</h1>' + (q.hint ? '<p class="hint">' + esc(q.hint) + '</p>' : '') +
+      '<input class="word" id="t" type="text" maxlength="' + MAX_WORD + '" placeholder="A word or two" autocomplete="off" autocapitalize="none">' +
+      '<div class="row"><span class="count" id="c"></span><button class="btn primary big" id="send" disabled>Send</button></div>';
+    const t = document.getElementById('t'), send = document.getElementById('send');
+    t.addEventListener('input', () => { send.disabled = !t.value.trim(); });
+    t.addEventListener('keydown', e => { if(e.key === 'Enter' && t.value.trim()) send.click(); });
+    t.focus();
+    send.addEventListener('click', () => submitPending(q, t.value.trim().slice(0, MAX_WORD)));
+  }
+
+  async function submitPending(q, text){
+    if(!text) return;
+    const send = document.getElementById('send'); if(send) send.disabled = true;
+    try{
+      await RW.push(RW.P.pending + '/' + S.live.sessionId, { q: q.id, t: text, ts: Date.now() });
+      S.sent.push(text); S.composing = false;
+      render();
+    }catch(e){
+      RW.toast('That did not send. Try again.');
+      if(send) send.disabled = false;
+    }
+  }
+
+  function renderSent(q, text, again){
+    body.innerHTML = '<div class="sent"><div class="kick">Sent</div><h2>Thank you</h2>' +
+      '<p>' + (q.type === 'words' ? 'Your word joins the cloud once it has been shown.' : 'It reaches the wall once the presenter shows it.') + '</p>' +
+      '<blockquote>' + esc(text) + '</blockquote>' +
+      '<button class="btn" id="again">' + esc(again) + '</button></div>';
+    document.getElementById('again').onclick = () => { S.composing = true; render(); };
+  }
+
+  /* ---------- multiple choice ---------- */
+  function renderChoice(q){
+    const opts = q.options || [];
+    const chosen = new Set(S.vote ? String(S.vote).split(',').map(Number) : []);
+    body.innerHTML = kickFor(q) + '<h1>' + esc(q.question) + '</h1>' + (q.hint ? '<p class="hint">' + esc(q.hint) + '</p>' : '') +
+      '<div class="opts">' + opts.map((o, i) => '<button class="opt ' + (q.multi ? 'multi' : '') + (chosen.has(i) ? ' on' : '') + '" data-i="' + i + '"><i></i><span>' + esc(o) + '</span></button>').join('') + '</div>' +
+      (q.multi ? '<div class="row"><span class="count" id="c"></span><button class="btn primary big" id="send">' + (S.vote ? 'Update' : 'Send') + '</button></div>' : '') +
+      '<div id="res"></div>';
+    body.querySelectorAll('.opt').forEach(b => b.addEventListener('click', async () => {
+      const i = +b.dataset.i;
+      if(q.multi){ b.classList.toggle('on'); return; }
+      body.querySelectorAll('.opt').forEach(x => x.classList.remove('on')); b.classList.add('on');
+      await castVote(q, String(i));
+    }));
+    const send = document.getElementById('send');
+    if(send) send.addEventListener('click', async () => {
+      const picked = [...body.querySelectorAll('.opt.on')].map(b => b.dataset.i);
+      if(!picked.length){ RW.toast('Pick at least one'); return; }
+      await castVote(q, picked.join(','));
+    });
+    paintChoiceResults(q);
+  }
+
+  function paintChoiceResults(q){
+    const res = document.getElementById('res'); if(!res || S.vote == null) return;
+    const { counts, total } = RW.choiceCounts(S.votes, (q.options || []).length);
+    res.innerHTML = '<div class="results"><div class="lab">' + total + ' so far</div>' + (q.options || []).map((o, i) =>
+      '<div class="rbar" style="--c:' + RW.BRAND[i % RW.BRAND.length] + '"><div class="l"><span>' + esc(o) + '</span><b>' + counts[i] + '</b></div><div class="t"><div class="f" style="width:' + (total ? counts[i] / Math.max(...counts, 1) * 100 : 0) + '%"></div></div></div>').join('') + '</div>';
+  }
+
+  /* ---------- scale ---------- */
+  function renderScale(q){
+    const min = +q.min || 1, max = +q.max || 5;
+    let btns = '';
+    for(let v = min; v <= max; v++) btns += '<button data-v="' + v + '"' + (String(S.vote) === String(v) ? ' class="on"' : '') + '>' + v + '</button>';
+    body.innerHTML = kickFor(q) + '<h1>' + esc(q.question) + '</h1>' + (q.hint ? '<p class="hint">' + esc(q.hint) + '</p>' : '') +
+      '<div class="scale">' + btns + '</div><div class="slabels"><span>' + esc(q.minLabel || '') + '</span><span>' + esc(q.maxLabel || '') + '</span></div><div id="res"></div>';
+    body.querySelectorAll('.scale button').forEach(b => b.addEventListener('click', async () => {
+      body.querySelectorAll('.scale button').forEach(x => x.classList.remove('on')); b.classList.add('on');
+      await castVote(q, b.dataset.v);
+    }));
+    paintScaleResults(q);
+  }
+
+  function paintScaleResults(q){
+    const res = document.getElementById('res'); if(!res || S.vote == null) return;
+    const min = +q.min || 1, max = +q.max || 5;
+    const { counts, total, mean } = RW.scaleStats(S.votes, min, max);
+    const peak = Math.max(1, ...Object.values(counts));
+    let cols = '';
+    for(let v = min; v <= max; v++) cols += '<div style="--c:' + RW.BRAND[(v - min) % RW.BRAND.length] + '"><b>' + counts[v] + '</b><i style="height:' + (counts[v] / peak * 100) + '%"></i><span>' + v + '</span></div>';
+    res.innerHTML = '<div class="results"><div class="lab">' + total + ' so far' + (mean != null ? ' · average ' + mean.toFixed(1) : '') + '</div><div class="rscale">' + cols + '</div></div>';
+  }
+
+  async function castVote(q, value){
+    try{
+      await RW.set(RW.P.sessions + '/' + S.live.sessionId + '/votes/' + q.id + '/' + cid, value);
+      S.vote = value;
+      try{ localStorage.setItem('rw:vote:' + S.live.sessionId + ':' + q.id, value); }catch(e){}
+      watchVotes(q);
+      if(q.type === 'choice') paintChoiceResults(q); else paintScaleResults(q);
+    }catch(e){ RW.toast('That did not send. Try again.'); }
+  }
+
+  function watchVotes(q){
+    if(S.unsub) return;
+    S.unsub = RW.watch(RW.P.sessions + '/' + S.live.sessionId + '/votes/' + q.id, v => {
+      S.votes = v || {};
+      if(q.type === 'choice') paintChoiceResults(q); else paintScaleResults(q);
+    });
+  }
+
+  /* ---------- follow the live pointer ---------- */
+  RW.watch(RW.P.live, (live, err) => {
+    if(err){ setLive('stale', 'Connection lost'); return; }
+    const q = live && live.question;
+    const key = live && live.sessionId ? live.sessionId + ':' + (q ? q.id : '-') : null;
+    S.live = live;
+    if(key !== S.qid){
+      S.qid = key; S.sent = []; S.composing = false; S.vote = null; S.votes = {};
+      if(S.unsub){ S.unsub(); S.unsub = null; }
+      if(q && (q.type === 'choice' || q.type === 'scale')){
+        try{ S.vote = localStorage.getItem('rw:vote:' + live.sessionId + ':' + q.id); }catch(e){}
+        if(S.vote != null) watchVotes(q);
+      }
+      render();
+    }
+    setLive(live && live.sessionId ? '' : 'off', live && live.sessionId ? 'Live' : 'Waiting');
+  });
+})();
+</script>
+</body>
+</html>
