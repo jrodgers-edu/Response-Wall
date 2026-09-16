@@ -66,8 +66,13 @@
     if(app) return { app, db, auth };
     app  = firebase.initializeApp(CONFIG);
     db   = firebase.database();
-    auth = firebase.auth();
-    try{ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); }catch(e){}
+    /* The participant page is anonymous and loads only the app + database
+       SDKs, so firebase.auth does not exist there. Only wire auth up on the
+       pages that load it (studio, present, remote). */
+    if(typeof firebase.auth === 'function'){
+      auth = firebase.auth();
+      try{ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); }catch(e){}
+    }
     return { app, db, auth };
   }
   const ref = path => init().db.ref(path);

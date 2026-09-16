@@ -86,11 +86,18 @@ input.word{font-size:20px;border-radius:14px;padding:14px;font-family:'Roboto Sl
 <script>
 (function(){
   "use strict";
-  document.getElementById('ui').textContent = RW.UI_CSS;
-  RW.init();
-  const cid = RW.clientId();
   const body = document.getElementById('body');
   const esc = RW.esc;
+  try{
+    document.getElementById('ui').textContent = RW.UI_CSS;
+    RW.init();
+  }catch(e){
+    document.getElementById('live').className = 'live stale';
+    document.getElementById('livetext').textContent = 'Not connected';
+    body.innerHTML = '<div class="waiting"><h1>This page could not connect</h1><p>Check your signal or Wi-Fi and reload. If it keeps happening, tell the presenter.</p></div>';
+    throw e;
+  }
+  const cid = RW.clientId();
 
   const S = { live: null, qid: null, sent: [], vote: null, unsub: null, votes: {} };
   const MAX_TEXT = 180, MAX_WORD = 40;
